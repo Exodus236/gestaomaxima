@@ -53,19 +53,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const normalizeEmail = (input: string): string => {
+    const trimmed = input.trim().toLowerCase();
+    if (trimmed.includes('@')) {
+      return trimmed;
+    }
+    return `${trimmed}@gmail.com`;
+  };
+
   const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      const cleanEmail = normalizeEmail(email);
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
       if (error) {
         let msg = error.message;
         if (msg.includes('Invalid login credentials')) {
-          msg = 'E-mail ou senha incorretos.';
+          msg = `E-mail ou senha incorretos para ${cleanEmail}.`;
         } else if (msg.includes('Email not confirmed')) {
-          msg = 'E-mail ainda não confirmado. Verifique sua caixa de entrada.';
+          msg = 'E-mail pendente de confirmação. Verifique seu e-mail ou desative "Confirm email" nas configurações do Supabase.';
         }
         return { success: false, error: msg };
       }
@@ -85,8 +94,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string
   ): Promise<{ success: boolean; error?: string; requiresEmailConfirmation?: boolean }> => {
     try {
+      const cleanEmail = normalizeEmail(email);
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
