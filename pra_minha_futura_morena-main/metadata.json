@@ -1,0 +1,6 @@
+{
+  "name": "Pedido para Luana",
+  "description": "Site romântico, interativo e divertido para Luana com surpresas e animações.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
