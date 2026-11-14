@@ -18,6 +18,10 @@ import { TaskModal } from './components/modals/TaskModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { SaleReceiptModal } from './components/modals/SaleReceiptModal';
 import { AdCopyModal } from './components/modals/AdCopyModal';
+import { GoalModal } from './components/modals/GoalModal';
+import { RankModal } from './components/modals/RankModal';
+import { LevelUpModal } from './components/modals/LevelUpModal';
+import { useStore } from './context/StoreContext';
 
 import { Product, Sale, TaskCategory } from './types';
 import { Store } from 'lucide-react';
@@ -27,6 +31,7 @@ interface MainAppProps {
 }
 
 function MainApp({ onShowAuth }: MainAppProps) {
+  const { levelUpRank, dismissLevelUp } = useStore();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   // Modais de Entrada
@@ -43,6 +48,8 @@ function MainApp({ onShowAuth }: MainAppProps) {
   const [taskCategoryPreset, setTaskCategoryPreset] = useState<TaskCategory | undefined>(undefined);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [isRankModalOpen, setIsRankModalOpen] = useState(false);
 
   // Novos Modais: Comprovante WhatsApp e Copywriting
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -96,6 +103,7 @@ function MainApp({ onShowAuth }: MainAppProps) {
         onOpenTransaction={() => handleOpenTransaction('aporte')}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenAuth={onShowAuth}
+        onOpenRankModal={() => setIsRankModalOpen(true)}
       />
 
       {/* Navegação Principal */}
@@ -110,6 +118,8 @@ function MainApp({ onShowAuth }: MainAppProps) {
             onOpenNewProduct={handleOpenNewProduct}
             onOpenTransaction={() => handleOpenTransaction('aporte')}
             onOpenTask={() => handleOpenTask()}
+            onOpenGoalModal={() => setIsGoalModalOpen(true)}
+            onOpenRankModal={() => setIsRankModalOpen(true)}
           />
         )}
 
@@ -193,6 +203,22 @@ function MainApp({ onShowAuth }: MainAppProps) {
         isOpen={isAdCopyModalOpen}
         onClose={() => setIsAdCopyModalOpen(false)}
         product={selectedProductForAd}
+      />
+
+      {/* Modais de Gamificação: Metas e Patentes */}
+      <GoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+      />
+
+      <RankModal
+        isOpen={isRankModalOpen}
+        onClose={() => setIsRankModalOpen(false)}
+      />
+
+      <LevelUpModal
+        rank={levelUpRank}
+        onClose={dismissLevelUp}
       />
     </div>
   );

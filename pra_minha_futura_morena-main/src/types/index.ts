@@ -151,3 +151,44 @@ export interface StoreSummary {
   tarefasPendentesCount: number;
   tarefasAltaPrioridadeCount: number;
 }
+
+// ==========================================
+// GAMIFICAÇÃO: PATENTES & METAS
+// ==========================================
+
+export type StoreRankId = 'bronze' | 'prata' | 'ouro' | 'platina' | 'diamante';
+
+export interface StoreRank {
+  id: StoreRankId;
+  name: string;
+  title: string;
+  minRevenue: number;
+  maxRevenue: number | null;
+  badge: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  description: string;
+  perk: string;
+}
+
+export interface StoreRankProgress {
+  currentRank: StoreRank;
+  nextRank: StoreRank | null;
+  totalRevenue: number;
+  progressPct: number;
+  remainingAmount: number;
+}
+
+export interface StoreGoalInfo {
+  monthlyGoal: number;
+  currentMonthRevenue: number;
+  currentMonthProfit: number;
+  progressPct: number;
+  remainingAmount: number;
+  isCompleted: boolean;
+  daysRemainingInMonth: number;
+  dailyPaceRequired: number;
+  estimatedOrdersNeeded: number;
+  averageTicket: number;
+}

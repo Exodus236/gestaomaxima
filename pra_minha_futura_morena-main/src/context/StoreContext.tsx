@@ -6,8 +6,13 @@ import {
   StoreTask,
   StoreSummary,
   PaymentStatus,
+  StoreRank,
+  StoreRankProgress,
+  StoreGoalInfo,
 } from '../types';
 import { useAuth } from './AuthContext';
+import { calculateStoreRank, calculateStoreGoalInfo } from '../utils/ranks';
+import confetti from 'canvas-confetti';
 import {
   fetchAllSupabaseData,
   syncProductToSupabase,
@@ -28,6 +33,12 @@ interface StoreContextType {
   capital: number;
   pixKey: string;
   setPixKey: (key: string) => void;
+  monthlyGoal: number;
+  setMonthlyGoal: (goal: number) => void;
+  rankProgress: StoreRankProgress;
+  goalInfo: StoreGoalInfo;
+  levelUpRank: StoreRank | null;
+  dismissLevelUp: () => void;
   summary: StoreSummary;
   darkMode: boolean;
   toggleDarkMode: () => void;
@@ -152,6 +163,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [sales, setSales] = useState<Sale[]>([]);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [tasks, setTasks] = useState<StoreTask[]>([]);
+  const [monthlyGoal, setMonthlyGoalState] = useState<number>(1000);
+  const [levelUpRank, setLevelUpRank] = useState<StoreRank | null>(null);
+
+  const dismissLevelUp = () => setLevelUpRank(null);
+
+  const setMonthlyGoal = (goal: number) => {
+    const validGoal = Math.max(100, goal);
+    setMonthlyGoalState(validGoal);
+    syncSettingsToSupabase(capital, pixKey, user?.id);
+  };
 
   // Carregar dados locais correspondentes ao usuário atual
   const loadLocalUserData = useCallback(() => {
@@ -178,6 +199,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setSales([]);
           setTransactions([]);
           setTasks([]);
+          setMonthlyGoalState(1000);
           return false;
         }
 
@@ -187,6 +209,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSales(Array.isArray(parsed.sales) ? parsed.sales : []);
         setTransactions(Array.isArray(parsed.transactions) ? parsed.transactions : []);
         setTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
+        setMonthlyGoalState(typeof parsed.monthlyGoal === 'number' && parsed.monthlyGoal > 0 ? parsed.monthlyGoal : 1000);
         return true;
       } catch (e) {
         console.error('Erro ao ler dados locais:', e);
@@ -199,6 +222,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSales([]);
       setTransactions([]);
       setTasks([]);
+      setMonthlyGoalState(1000);
       return true;
     } else {
       // Usuário autenticado novo: COMEÇA 100% ZERADO
@@ -208,6 +232,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSales([]);
       setTransactions([]);
       setTasks([]);
+      setMonthlyGoalState(1000);
       return false;
     }
     return false;
@@ -226,11 +251,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       sales,
       transactions,
       tasks,
+      monthlyGoal,
       userId: user?.id || null,
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(key, JSON.stringify(payload));
-  }, [capital, pixKey, products, sales, transactions, tasks, getStorageKey, user?.id, authLoading]);
+  }, [capital, pixKey, products, sales, transactions, tasks, monthlyGoal, getStorageKey, user?.id, authLoading]);
 
   // CARREGAR DADOS DO SUPABASE AO MUDAR USUÁRIO
   const refreshFromSupabase = useCallback(async () => {
@@ -567,6 +593,37 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
 
+    // Verifica Level Up de Patente e Meta do Mês
+    const prevHistoricalRev = sales.reduce((acc, s) => acc + s.totalReceived, 0);
+    const newHistoricalRev = prevHistoricalRev + totalReceived;
+    const prevRank = calculateStoreRank(prevHistoricalRev).currentRank;
+    const newRank = calculateStoreRank(newHistoricalRev).currentRank;
+
+    if (newRank.id !== prevRank.id) {
+      setLevelUpRank(newRank);
+    } else {
+      const nowD = new Date();
+      const currentYear = nowD.getFullYear();
+      const currentMonth = nowD.getMonth();
+      const prevMonthSales = sales.filter((s) => {
+        const d = new Date(s.soldAt);
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+      });
+      const prevMonthRev = prevMonthSales.reduce((acc, s) => acc + s.totalReceived, 0);
+      const newMonthRev = prevMonthRev + totalReceived;
+      if (prevMonthRev < monthlyGoal && newMonthRev >= monthlyGoal) {
+        try {
+          confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.6 },
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
     return { success: true };
   };
 
@@ -869,6 +926,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     tarefasAltaPrioridadeCount: tasks.filter((t) => !t.completed && t.priority === 'alta').length,
   };
 
+  // CÁLCULO DE GAMIFICAÇÃO & METAS
+  const rankProgress = calculateStoreRank(summary.totalFaturamento);
+  const goalInfo = calculateStoreGoalInfo(
+    monthlyGoal,
+    summary.vendasDoMesFaturamento,
+    summary.vendasDoMesLucro,
+    summary.vendasDoMesCount
+  );
+
   return (
     <StoreContext.Provider
       value={{
@@ -879,6 +945,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         capital,
         pixKey,
         setPixKey,
+        monthlyGoal,
+        setMonthlyGoal,
+        rankProgress,
+        goalInfo,
+        levelUpRank,
+        dismissLevelUp,
         summary,
         darkMode,
         toggleDarkMode,

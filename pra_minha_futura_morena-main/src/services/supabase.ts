@@ -215,12 +215,27 @@ export async function fetchAllSupabaseData(userId?: string): Promise<{
       settingQuery.maybeSingle(),
     ]);
 
-    // Se a coluna user_id não existe no banco (usuário ainda não rodou o script SQL)
+    // Se a coluna user_id não existe no banco (usuário ainda não rodou o script SQL),
+    // faz o fallback automático para buscar os registros globais da loja sem o filtro user_id
     if (prodRes.error && (prodRes.error.code === '42703' || prodRes.error.message?.includes('user_id'))) {
+      const [pFallback, sFallback, tFallback, tkFallback, stFallback] = await Promise.all([
+        supabase.from('products').select('*').order('created_at', { ascending: false }),
+        supabase.from('sales').select('*').order('sold_at', { ascending: false }),
+        supabase.from('financial_transactions').select('*').order('date', { ascending: false }),
+        supabase.from('store_tasks').select('*').order('created_at', { ascending: false }),
+        supabase.from('store_settings').select('*').eq('id', 'primary_store').maybeSingle(),
+      ]);
+
+      if (pFallback.error) throw pFallback.error;
+
       return {
-        success: false,
-        needsSchemaUpdate: true,
-        error: 'Coluna user_id pendente no Supabase. Execute o script supabase_schema.sql.',
+        success: true,
+        products: (pFallback.data || []).map(mapProductFromDb),
+        sales: (sFallback.data || []).map(mapSaleFromDb),
+        transactions: (tFallback.data || []).map(mapTransactionFromDb),
+        tasks: (tkFallback.data || []).map(mapTaskFromDb),
+        capital: stFallback.data?.capital_balance !== undefined ? Number(stFallback.data.capital_balance) : undefined,
+        pixKey: stFallback.data?.pix_key || undefined,
       };
     }
 

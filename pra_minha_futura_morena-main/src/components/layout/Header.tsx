@@ -25,6 +25,7 @@ interface HeaderProps {
   onOpenTransaction: () => void;
   onOpenSettings: () => void;
   onOpenAuth?: () => void;
+  onOpenRankModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,8 +34,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTransaction,
   onOpenSettings,
   onOpenAuth,
+  onOpenRankModal,
 }) => {
-  const { summary, darkMode, toggleDarkMode, supabaseConnected, supabaseLoading, refreshFromSupabase } = useStore();
+  const { summary, darkMode, toggleDarkMode, supabaseConnected, supabaseLoading, refreshFromSupabase, rankProgress } = useStore();
   const { user, isGuest, signOut } = useAuth();
 
   return (
@@ -159,6 +161,16 @@ export const Header: React.FC<HeaderProps> = ({
               title="Configurações, Chave Pix e Backup"
             >
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            {/* Badge de Patente do Lojista */}
+            <button
+              onClick={onOpenRankModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 transition cursor-pointer shadow-2xs"
+              title={`Patente da Loja: ${rankProgress.currentRank.name} (${rankProgress.currentRank.title}). Clique para ver conquistas!`}
+            >
+              <span className="text-base">{rankProgress.currentRank.badge}</span>
+              <span className="text-xs font-black hidden sm:inline">{rankProgress.currentRank.name}</span>
             </button>
 
             {/* Usuário / Autenticação Supabase */}

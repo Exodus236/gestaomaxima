@@ -16,6 +16,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { ActiveTab } from '../layout/Navigation';
+import { GoalAndRankCard } from './GoalAndRankCard';
 
 interface DashboardViewProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -23,6 +24,8 @@ interface DashboardViewProps {
   onOpenNewProduct: () => void;
   onOpenTransaction: () => void;
   onOpenTask: () => void;
+  onOpenGoalModal: () => void;
+  onOpenRankModal: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -31,6 +34,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewProduct,
   onOpenTransaction,
   onOpenTask,
+  onOpenGoalModal,
+  onOpenRankModal,
 }) => {
   const { summary, sales, tasks, products, toggleTask } = useStore();
 
@@ -88,6 +93,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Metas do Mês & Patente da Loja */}
+      <GoalAndRankCard
+        onOpenGoalModal={onOpenGoalModal}
+        onOpenRankModal={onOpenRankModal}
+      />
 
       {/* 6 Indicadores Principais (KPI Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
