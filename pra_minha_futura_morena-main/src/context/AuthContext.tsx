@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         let msg = error.message;
         if (msg.includes('Invalid login credentials')) {
-          msg = `E-mail ou senha incorretos para ${cleanEmail}.`;
+          msg = 'E-mail ou senha incorretos.';
         } else if (msg.includes('Email not confirmed')) {
           msg = 'E-mail pendente de confirmação. Verifique seu e-mail ou desative "Confirm email" nas configurações do Supabase.';
         }

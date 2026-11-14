@@ -33,6 +33,8 @@ interface StoreContextType {
   capital: number;
   pixKey: string;
   setPixKey: (key: string) => void;
+  nickname: string;
+  setNickname: (name: string) => void;
   monthlyGoal: number;
   setMonthlyGoal: (goal: number) => void;
   rankProgress: StoreRankProgress;
@@ -165,13 +167,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [tasks, setTasks] = useState<StoreTask[]>([]);
   const [monthlyGoal, setMonthlyGoalState] = useState<number>(1000);
   const [levelUpRank, setLevelUpRank] = useState<StoreRank | null>(null);
+  const [nickname, setNicknameState] = useState<string>(() => {
+    return localStorage.getItem('rl_market_user_nickname') || '';
+  });
 
   const dismissLevelUp = () => setLevelUpRank(null);
+
+  const setNickname = (newName: string) => {
+    const clean = newName.trim();
+    setNicknameState(clean);
+    localStorage.setItem('rl_market_user_nickname', clean);
+    if (user?.id) {
+      supabase.auth.updateUser({ data: { nickname: clean } });
+      syncSettingsToSupabase(capital, pixKey, user.id, clean);
+    }
+  };
 
   const setMonthlyGoal = (goal: number) => {
     const validGoal = Math.max(100, goal);
     setMonthlyGoalState(validGoal);
-    syncSettingsToSupabase(capital, pixKey, user?.id);
+    syncSettingsToSupabase(capital, pixKey, user?.id, nickname);
   };
 
   // Carregar dados locais correspondentes ao usuário atual
@@ -210,6 +225,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setTransactions(Array.isArray(parsed.transactions) ? parsed.transactions : []);
         setTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
         setMonthlyGoalState(typeof parsed.monthlyGoal === 'number' && parsed.monthlyGoal > 0 ? parsed.monthlyGoal : 1000);
+        if (parsed.nickname) {
+          setNicknameState(parsed.nickname);
+        } else if (user?.user_metadata?.nickname) {
+          setNicknameState(user.user_metadata.nickname);
+        }
         return true;
       } catch (e) {
         console.error('Erro ao ler dados locais:', e);
@@ -233,6 +253,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setTransactions([]);
       setTasks([]);
       setMonthlyGoalState(1000);
+      if (user?.user_metadata?.nickname) {
+        setNicknameState(user.user_metadata.nickname);
+      }
       return false;
     }
     return false;
@@ -247,6 +270,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const payload = {
       capital,
       pixKey,
+      nickname,
       products,
       sales,
       transactions,
@@ -256,7 +280,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(key, JSON.stringify(payload));
-  }, [capital, pixKey, products, sales, transactions, tasks, monthlyGoal, getStorageKey, user?.id, authLoading]);
+  }, [capital, pixKey, nickname, products, sales, transactions, tasks, monthlyGoal, getStorageKey, user?.id, authLoading]);
 
   // CARREGAR DADOS DO SUPABASE AO MUDAR USUÁRIO
   const refreshFromSupabase = useCallback(async () => {
@@ -340,6 +364,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (result.pixKey !== undefined) {
         setPixKeyState(result.pixKey);
+      }
+
+      if (result.storeName && result.storeName !== 'RL Market') {
+        setNicknameState(result.storeName);
+        localStorage.setItem('rl_market_user_nickname', result.storeName);
       }
     } else {
       // Se deu erro ao buscar dados remotos (ex: schema pendente ou offline), preserva tudo que já foi lido localmente!
@@ -945,6 +974,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         capital,
         pixKey,
         setPixKey,
+        nickname,
+        setNickname,
         monthlyGoal,
         setMonthlyGoal,
         rankProgress,

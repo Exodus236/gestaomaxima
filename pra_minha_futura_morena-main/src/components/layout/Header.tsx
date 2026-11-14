@@ -17,6 +17,7 @@ import {
   LogOut,
   User as UserIcon,
   LogIn,
+  Edit3,
 } from 'lucide-react';
 
 interface HeaderProps {

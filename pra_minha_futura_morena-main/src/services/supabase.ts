@@ -186,6 +186,7 @@ export async function fetchAllSupabaseData(userId?: string): Promise<{
   tasks?: StoreTask[];
   capital?: number;
   pixKey?: string;
+  storeName?: string;
   error?: string;
   needsSchemaUpdate?: boolean;
 }> {
@@ -236,6 +237,7 @@ export async function fetchAllSupabaseData(userId?: string): Promise<{
         tasks: (tkFallback.data || []).map(mapTaskFromDb),
         capital: stFallback.data?.capital_balance !== undefined ? Number(stFallback.data.capital_balance) : undefined,
         pixKey: stFallback.data?.pix_key || undefined,
+        storeName: stFallback.data?.store_name || undefined,
       };
     }
 
@@ -249,6 +251,7 @@ export async function fetchAllSupabaseData(userId?: string): Promise<{
       tasks: (taskRes.data || []).map(mapTaskFromDb),
       capital: settingRes.data?.capital_balance !== undefined ? Number(settingRes.data.capital_balance) : undefined,
       pixKey: settingRes.data?.pix_key || undefined,
+      storeName: settingRes.data?.store_name || undefined,
     };
   } catch (err: any) {
     console.error('Erro ao buscar dados do Supabase:', err);
@@ -353,13 +356,14 @@ export async function deleteTaskFromSupabase(id: string) {
   }
 }
 
-export async function syncSettingsToSupabase(capital: number, pixKey: string, userId?: string) {
+export async function syncSettingsToSupabase(capital: number, pixKey: string, userId?: string, nickname?: string) {
   try {
     const settingId = userId ? `store_${userId}` : 'primary_store';
+    const storeName = nickname?.trim() || 'RL Market';
     const payload = {
       id: settingId,
       user_id: userId || null,
-      store_name: 'RL Market',
+      store_name: storeName,
       pix_key: pixKey,
       capital_balance: capital,
       updated_at: new Date().toISOString(),
@@ -369,7 +373,7 @@ export async function syncSettingsToSupabase(capital: number, pixKey: string, us
       if (error.message?.includes('user_id') || error.code === 'PGRST204' || error.code === '42703') {
         await supabase.from('store_settings').upsert({
           id: 'primary_store',
-          store_name: 'RL Market',
+          store_name: storeName,
           pix_key: pixKey,
           capital_balance: capital,
           updated_at: new Date().toISOString(),
