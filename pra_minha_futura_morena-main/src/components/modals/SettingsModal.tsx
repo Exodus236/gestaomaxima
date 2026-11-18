@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { X, Settings, Download, Upload, RotateCcw, Trash2, Check, Database, Key } from 'lucide-react';
+import { X, Settings, Download, Upload, RotateCcw, Trash2, Check, Database, Key, User } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -8,11 +8,20 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const { resetToDemoData, clearAllData, exportDataJson, importDataJson, pixKey, setPixKey } = useStore();
+  const { resetToDemoData, clearAllData, exportDataJson, importDataJson, pixKey, setPixKey, nickname, setNickname } = useStore();
   const [importText, setImportText] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [currentPix, setCurrentPix] = useState(pixKey);
+  const [currentNick, setCurrentNick] = useState(nickname);
+
+  // Sincroniza estados ao abrir
+  React.useEffect(() => {
+    if (isOpen) {
+      setCurrentPix(pixKey);
+      setCurrentNick(nickname);
+    }
+  }, [isOpen, pixKey, nickname]);
 
   if (!isOpen) return null;
 
@@ -32,6 +41,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     e.preventDefault();
     setPixKey(currentPix);
     showNotice('Chave Pix salva com sucesso!');
+  };
+
+  const handleSaveNickname = (e: React.FormEvent) => {
+    e.preventDefault();
+    setNickname(currentNick);
+    showNotice('Apelido / Nickname atualizado com sucesso!');
   };
 
   const handleImportSubmit = () => {
@@ -103,6 +118,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <span>{notification}</span>
             </div>
           )}
+
+          {/* Configuração do Nickname */}
+          <form onSubmit={handleSaveNickname} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-blue-500" />
+              Apelido / Nickname (oculta o e-mail na loja)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Ex: Rhyan Trader, Loja do Futuro..."
+                value={currentNick}
+                onChange={(e) => setCurrentNick(e.target.value)}
+                className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition cursor-pointer"
+              >
+                Salvar
+              </button>
+            </div>
+          </form>
 
           {/* Configuração da Chave Pix */}
           <form onSubmit={handleSavePix} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">

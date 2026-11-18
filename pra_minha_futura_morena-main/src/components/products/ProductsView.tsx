@@ -12,7 +12,9 @@ import {
   TrendingUp,
   Sparkles,
   Megaphone,
+  RotateCcw,
 } from 'lucide-react';
+import { RefundProductModal } from '../modals/RefundProductModal';
 
 interface ProductsViewProps {
   onOpenNewProduct: () => void;
@@ -32,6 +34,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('todas');
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
+  const [refundTargetProduct, setRefundTargetProduct] = useState<Product | null>(null);
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
@@ -322,6 +325,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <Megaphone className="w-4 h-4" />
                   </button>
 
+                  {/* Botão Reembolso de Compra */}
+                  <button
+                    onClick={() => setRefundTargetProduct(product)}
+                    disabled={isOutOfStock}
+                    className="p-2 rounded-xl text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                    title="Reembolso de Compra (devolve custo ao caixa)"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+
                   <button
                     onClick={() => onEditProduct(product)}
                     className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 transition cursor-pointer"
@@ -343,6 +356,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           })}
         </div>
       )}
+
+      {/* Modal de Reembolso de Produto */}
+      <RefundProductModal
+        isOpen={!!refundTargetProduct}
+        onClose={() => setRefundTargetProduct(null)}
+        product={refundTargetProduct}
+      />
     </div>
   );
 };

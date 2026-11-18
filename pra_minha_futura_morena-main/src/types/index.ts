@@ -81,7 +81,8 @@ export type TransactionType =
   | 'aporte_capital'         // Entrada manual de capital no caixa (+)
   | 'compra_estoque'         // Saída para compra de mercadoria (-)
   | 'despesa_operacional'    // Saída com frete, anúncio, embalagem (-)
-  | 'retirada';              // Saída de pró-labore / saque (-)
+  | 'retirada'               // Saída de pró-labore / saque (-)
+  | 'reembolso_compra';      // Reembolso/estorno de compra: valor de custo volta ao caixa (+)
 
 export interface FinancialTransaction {
   id: string;

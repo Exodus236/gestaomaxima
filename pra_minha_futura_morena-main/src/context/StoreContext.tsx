@@ -53,6 +53,7 @@ interface StoreContextType {
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   adjustStock: (id: string, quantityChange: number, reason?: string) => void;
+  refundProduct: (productId: string, quantityToRefund: number, reason?: string) => { success: boolean; error?: string };
   // Vendas
   registerSale: (saleData: {
     productId: string;
@@ -488,6 +489,69 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return updated;
       })
     );
+  };
+
+  const refundProduct = (
+    productId: string,
+    quantityToRefund: number,
+    reason?: string
+  ): { success: boolean; error?: string } => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      return { success: false, error: 'Produto não encontrado.' };
+    }
+
+    const qty = Number(quantityToRefund);
+    if (isNaN(qty) || qty <= 0) {
+      return { success: false, error: 'Quantidade de reembolso inválida.' };
+    }
+
+    if (product.quantity < qty) {
+      return {
+        success: false,
+        error: `Estoque insuficiente para reembolso. Disponível: ${product.quantity} un.`,
+      };
+    }
+
+    // Valor de custo que volta ao caixa da empresa
+    const refundAmount = Number((product.costPrice * qty).toFixed(2));
+    const now = new Date().toISOString();
+
+    // 1. Atualiza estoque do produto
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== productId) return p;
+        const newQty = p.quantity - qty;
+        const updated = {
+          ...p,
+          quantity: newQty,
+          status: newQty <= 0 ? 'esgotado' as const : p.status,
+          updatedAt: now,
+        };
+        syncProductToSupabase(updated, user?.id);
+        return updated;
+      })
+    );
+
+    // 2. Estorna o valor de compra para o caixa (capital)
+    const newCapital = Number((capital + refundAmount).toFixed(2));
+    setCapital(newCapital);
+    syncSettingsToSupabase(newCapital, pixKey, user?.id, nickname);
+
+    // 3. Registra transação financeira positiva do tipo reembolso_compra
+    const tx: FinancialTransaction = {
+      id: `tx-${Date.now()}`,
+      userId: user?.id,
+      type: 'reembolso_compra',
+      amount: refundAmount,
+      description: `Reembolso de compra: ${qty}x ${product.name}${reason ? ` (${reason})` : ''}`,
+      relatedProductId: productId,
+      date: now,
+    };
+    setTransactions((prev) => [tx, ...prev]);
+    syncTransactionToSupabase(tx, user?.id);
+
+    return { success: true };
   };
 
   // AÇÕES: VENDAS
@@ -992,6 +1056,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateProduct,
         deleteProduct,
         adjustStock,
+        refundProduct,
         registerSale,
         cancelSale,
         receivePendingPayment,

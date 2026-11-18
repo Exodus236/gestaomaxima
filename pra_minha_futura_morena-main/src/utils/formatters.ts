@@ -140,5 +140,7 @@ export function getTransactionTypeLabel(type: TransactionType) {
       return { label: 'Despesa Operacional', isPositive: false, color: 'text-rose-600 dark:text-rose-400' };
     case 'retirada':
       return { label: 'Retirada / Pró-labore', isPositive: false, color: 'text-purple-600 dark:text-purple-400' };
+    case 'reembolso_compra':
+      return { label: 'Reembolso de Compra', isPositive: true, color: 'text-teal-600 dark:text-teal-400' };
   }
 }

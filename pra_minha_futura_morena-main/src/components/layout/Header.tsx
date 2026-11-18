@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onOpenRankModal,
 }) => {
-  const { summary, darkMode, toggleDarkMode, supabaseConnected, supabaseLoading, refreshFromSupabase, rankProgress } = useStore();
+  const { summary, darkMode, toggleDarkMode, supabaseConnected, supabaseLoading, refreshFromSupabase, rankProgress, nickname } = useStore();
   const { user, isGuest, signOut } = useAuth();
 
   return (
@@ -179,10 +179,10 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center gap-1.5 pl-1 sm:pl-2 border-l border-slate-200 dark:border-slate-800">
                 <div
                   className="hidden md:flex flex-col text-right leading-tight max-w-[120px]"
-                  title={user.email}
+                  title={`Usuário: ${nickname || user.email?.split('@')[0]}`}
                 >
                   <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {user.email?.split('@')[0]}
+                    {nickname || user.email?.split('@')[0] || 'Lojista'}
                   </span>
                   <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">
                     Autenticado
@@ -191,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => signOut()}
                   className="p-2 sm:p-2.5 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                  title={`Sair da conta (${user.email})`}
+                  title="Sair da conta"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
