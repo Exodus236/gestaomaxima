@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => refreshFromSupabase()}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Supabase Nuvem</span>
+                    <span>Conectado</span>
                   </span>
                 ) : (
                   <button
