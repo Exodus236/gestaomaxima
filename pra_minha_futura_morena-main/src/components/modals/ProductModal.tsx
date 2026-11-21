@@ -273,6 +273,48 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </button>
             </div>
 
+            {/* Sugestões Rápidas de Marcação de Preço */}
+            {costPrice > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-slate-400 flex items-center gap-1 mr-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" /> Sugestões automáticas:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSalePrice(Math.round(costPrice * 1.35));
+                    setMinPrice(Math.round(costPrice * 1.15));
+                  }}
+                  className="px-2 py-1 text-[11px] font-bold rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40 hover:bg-blue-100 transition"
+                  title="35% de margem no anúncio e 15% como mínimo de queima"
+                >
+                  ⚡ Giro Rápido (+35%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSalePrice(Math.round(costPrice * 1.70));
+                    setMinPrice(Math.round(costPrice * 1.35));
+                  }}
+                  className="px-2 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40 hover:bg-emerald-100 transition"
+                  title="70% de margem no anúncio e 35% como mínimo"
+                >
+                  🟢 Margem Padrão (+70%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSalePrice(Math.round(costPrice * 2.0));
+                    setMinPrice(Math.round(costPrice * 1.5));
+                  }}
+                  className="px-2 py-1 text-[11px] font-bold rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-900/40 hover:bg-purple-100 transition"
+                  title="Margem dobrada 100% markup (ex: comprou por 80, vende por 160)"
+                >
+                  👑 Dobrado (+100%)
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">

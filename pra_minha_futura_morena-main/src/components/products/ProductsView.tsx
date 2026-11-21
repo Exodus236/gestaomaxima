@@ -13,8 +13,10 @@ import {
   Sparkles,
   Megaphone,
   RotateCcw,
+  Calculator,
 } from 'lucide-react';
 import { RefundProductModal } from '../modals/RefundProductModal';
+import { PriceSimulatorModal } from '../modals/PriceSimulatorModal';
 
 interface ProductsViewProps {
   onOpenNewProduct: () => void;
@@ -29,12 +31,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   onQuickSale,
   onGenerateAd,
 }) => {
-  const { products, deleteProduct, adjustStock, summary } = useStore();
+  const { products, deleteProduct, adjustStock, updateProduct, summary } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('todas');
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
   const [refundTargetProduct, setRefundTargetProduct] = useState<Product | null>(null);
+  const [simulatorTargetProduct, setSimulatorTargetProduct] = useState<Product | null>(null);
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
@@ -325,6 +328,15 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <Megaphone className="w-4 h-4" />
                   </button>
 
+                  {/* Botão Simulador de Preço e Desconto */}
+                  <button
+                    onClick={() => setSimulatorTargetProduct(product)}
+                    className="p-2 rounded-xl text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 transition cursor-pointer"
+                    title="Simulador de Giro: até quanto posso descer sem prejuízo"
+                  >
+                    <Calculator className="w-4 h-4" />
+                  </button>
+
                   {/* Botão Reembolso de Compra */}
                   <button
                     onClick={() => setRefundTargetProduct(product)}
@@ -362,6 +374,18 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         isOpen={!!refundTargetProduct}
         onClose={() => setRefundTargetProduct(null)}
         product={refundTargetProduct}
+      />
+
+      {/* Modal de Simulador de Preço de Giro */}
+      <PriceSimulatorModal
+        isOpen={!!simulatorTargetProduct}
+        onClose={() => setSimulatorTargetProduct(null)}
+        product={simulatorTargetProduct}
+        onApplyMinPrice={(newMin) => {
+          if (simulatorTargetProduct) {
+            updateProduct(simulatorTargetProduct.id, { minPrice: newMin });
+          }
+        }}
       />
     </div>
   );
