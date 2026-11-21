@@ -176,6 +176,7 @@ export interface StoreRank {
   color: string;
   bgColor: string;
   borderColor: string;
+  cardBorderClass: string;
   description: string;
   perk: string;
 }
@@ -212,5 +213,7 @@ export interface UserLevelInfo {
   xpForNextLevel: number;
   progressPct: number;
   levelTitle: string;
+  starsCount: number; // 0 a 3 estrelas baseadas no nível
+  levelBorderColor: string;
 }
 

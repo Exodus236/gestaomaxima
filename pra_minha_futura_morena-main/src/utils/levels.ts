@@ -50,6 +50,24 @@ export function calculateUserLevel(totalXP: number): UserLevelInfo {
 
   const levelTitle = LEVEL_TITLES[level] || `Mestre Nv. ${level}`;
 
+  // Estrelas de prestígio e cores de borda por faixa de level
+  let starsCount = 0;
+  let levelBorderColor = 'border-slate-400/60 shadow-slate-500/20';
+
+  if (level >= 10) {
+    starsCount = 3;
+    levelBorderColor = 'border-amber-400 shadow-amber-400/40 text-amber-400';
+  } else if (level >= 7) {
+    starsCount = 2;
+    levelBorderColor = 'border-purple-400 shadow-purple-400/30 text-purple-400';
+  } else if (level >= 4) {
+    starsCount = 1;
+    levelBorderColor = 'border-blue-400 shadow-blue-400/30 text-blue-400';
+  } else {
+    starsCount = 0;
+    levelBorderColor = 'border-emerald-400 shadow-emerald-400/20 text-emerald-400';
+  }
+
   return {
     level,
     currentXP: xp,
@@ -57,5 +75,7 @@ export function calculateUserLevel(totalXP: number): UserLevelInfo {
     xpForNextLevel: neededForCurrentLevel,
     progressPct,
     levelTitle,
+    starsCount,
+    levelBorderColor,
   };
 }

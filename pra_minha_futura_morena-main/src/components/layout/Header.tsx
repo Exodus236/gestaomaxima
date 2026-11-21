@@ -165,25 +165,42 @@ export const Header: React.FC<HeaderProps> = ({
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            {/* Level & XP do Lojista */}
+            {/* Level & XP do Lojista com Borda Dupla (Patente + Level com Estrelas) */}
             <div
               onClick={onOpenRankModal}
-              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-300 cursor-pointer hover:bg-purple-500/15 transition shadow-2xs"
-              title={`Nível ${userLevelInfo.level} (${userLevelInfo.levelTitle}). XP: ${userLevelInfo.xpInCurrentLevel}/${userLevelInfo.xpForNextLevel} (${userLevelInfo.progressPct.toFixed(0)}%). Clique para ver detalhes!`}
+              className={`hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-2xl border-2 transition cursor-pointer shadow-md ${rankProgress.currentRank.cardBorderClass} bg-slate-900/90 hover:brightness-110`}
+              title={`Nível ${userLevelInfo.level} (${userLevelInfo.levelTitle}). Patente: ${rankProgress.currentRank.name}. Clique para ver carreira completa!`}
             >
-              <div className="w-5 h-5 rounded-lg bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">
-                {userLevelInfo.level}
+              {/* Insígnia do Level com Borda Interna */}
+              <div
+                className={`w-7 h-7 rounded-xl border-2 flex flex-col items-center justify-center font-black text-[11px] shadow-sm ${userLevelInfo.levelBorderColor} bg-slate-950`}
+              >
+                <span>{userLevelInfo.level}</span>
               </div>
+
               <div className="flex flex-col text-left">
-                <span className="text-[10px] font-black tracking-tight leading-none">
-                  Nv. {userLevelInfo.level}
-                </span>
-                <div className="w-16 h-1.5 bg-purple-950/20 dark:bg-purple-950/60 rounded-full overflow-hidden mt-1">
+                <div className="flex items-center gap-1 leading-none">
+                  <span className="text-[10px] font-black tracking-tight text-white">
+                    Nv. {userLevelInfo.level}
+                  </span>
+                  {/* Estrelas de prestígio */}
+                  {userLevelInfo.starsCount > 0 && (
+                    <span className="text-[10px] text-amber-400 font-black">
+                      {'★'.repeat(userLevelInfo.starsCount)}
+                    </span>
+                  )}
+                </div>
+                <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1 border border-slate-700/50">
                   <div
-                    className="h-full bg-purple-500 rounded-full transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-300"
                     style={{ width: `${userLevelInfo.progressPct}%` }}
                   />
                 </div>
+              </div>
+
+              {/* Ícone da Patente Atual Embutido */}
+              <div className="text-sm pl-1 border-l border-slate-700/60" title={`Patente: ${rankProgress.currentRank.name}`}>
+                {rankProgress.currentRank.badge}
               </div>
             </div>
 

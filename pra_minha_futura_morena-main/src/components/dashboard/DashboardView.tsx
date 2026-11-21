@@ -37,7 +37,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenGoalModal,
   onOpenRankModal,
 }) => {
-  const { summary, sales, tasks, products, toggleTask } = useStore();
+  const { summary, sales, tasks, products, toggleTask, rankProgress } = useStore();
+  const summaryCardBorder = rankProgress.currentRank.cardBorderClass || 'border-slate-200 dark:border-slate-800';
 
   const recentSales = sales.slice(0, 5);
   const pendingTasks = tasks.filter((t) => !t.completed).slice(0, 5);
@@ -100,10 +101,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onOpenRankModal={onOpenRankModal}
       />
 
-      {/* 6 Indicadores Principais (KPI Cards) */}
+      {/* 6 Indicadores Principais (KPI Cards) com bordas sincronizadas à Patente */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* 1. Capital disponível */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition">
+        <div className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border ${summaryCardBorder} shadow-xs hover:shadow-md transition`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Capital Disponível
@@ -121,7 +122,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 2. Total investido em mercadorias */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition">
+        <div className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border ${summaryCardBorder} shadow-xs hover:shadow-md transition`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total Investido em Estoque
@@ -139,7 +140,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 3. Valor potencial de venda */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition">
+        <div className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border ${summaryCardBorder} shadow-xs hover:shadow-md transition`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Potencial de Venda (Estoque)
@@ -157,7 +158,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 4. Lucro acumulado */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition">
+        <div className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border ${summaryCardBorder} shadow-xs hover:shadow-md transition`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Lucro Acumulado
@@ -178,7 +179,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 5. Vendas do mês */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition">
+        <div className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border ${summaryCardBorder} shadow-xs hover:shadow-md transition`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Vendas do Mês
@@ -199,7 +200,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 6. Tarefas pendentes */}
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition">
+        <div className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border ${summaryCardBorder} shadow-xs hover:shadow-md transition`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Tarefas Pendentes
