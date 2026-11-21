@@ -1122,7 +1122,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // CÁLCULO DE GAMIFICAÇÃO & METAS
   const rankProgress = calculateStoreRank(summary.totalFaturamento);
-  const userLevelInfo = calculateUserLevel(userXP);
+
+  // Calcula XP retroativo automaticamente se o usuário já tiver histórico (vendas e tarefas concluídas)
+  const historicalCompletedTasks = tasks.filter((t) => t.completed).length;
+  const historicalSalesCount = sales.length;
+  const minimumEarnedXP =
+    (historicalSalesCount * XP_VALUES.SALE_REGISTERED) +
+    (historicalCompletedTasks * XP_VALUES.TASK_COMPLETED);
+
+  const effectiveXP = Math.max(userXP, minimumEarnedXP);
+  const userLevelInfo = calculateUserLevel(effectiveXP);
   const goalInfo = calculateStoreGoalInfo(
     monthlyGoal,
     summary.vendasDoMesFaturamento,
@@ -1146,7 +1155,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setMonthlyGoal,
         rankProgress,
         goalInfo,
-        userXP,
+        userXP: effectiveXP,
         userLevelInfo,
         addXP,
         levelUpRank,
