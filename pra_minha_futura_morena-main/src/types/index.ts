@@ -157,7 +157,14 @@ export interface StoreSummary {
 // GAMIFICAÇÃO: PATENTES & METAS
 // ==========================================
 
-export type StoreRankId = 'bronze' | 'prata' | 'ouro' | 'platina' | 'diamante';
+export type StoreRankId =
+  | 'bronze'
+  | 'prata'
+  | 'ouro'
+  | 'safira'
+  | 'rubi'
+  | 'platina'
+  | 'diamante';
 
 export interface StoreRank {
   id: StoreRankId;

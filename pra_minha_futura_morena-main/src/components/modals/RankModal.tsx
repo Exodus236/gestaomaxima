@@ -52,6 +52,18 @@ export const RankModal: React.FC<RankModalProps> = ({ isOpen, onClose }) => {
       border: 'border-yellow-500/40',
       textGradient: 'from-yellow-300 via-amber-200 to-yellow-500',
     },
+    safira: {
+      bg: 'from-blue-950/90 via-slate-900 to-indigo-950/80',
+      badgeGlow: 'shadow-blue-500/40 border-blue-500/50 text-blue-400',
+      border: 'border-blue-500/40',
+      textGradient: 'from-blue-300 via-sky-200 to-blue-400',
+    },
+    rubi: {
+      bg: 'from-rose-950/90 via-stone-900 to-red-950/70',
+      badgeGlow: 'shadow-rose-500/40 border-rose-500/50 text-rose-400',
+      border: 'border-rose-500/40',
+      textGradient: 'from-rose-300 via-red-200 to-rose-400',
+    },
     platina: {
       bg: 'from-cyan-950/90 via-slate-900 to-teal-950/70',
       badgeGlow: 'shadow-cyan-500/40 border-cyan-500/50 text-cyan-400',
