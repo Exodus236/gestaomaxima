@@ -25,7 +25,7 @@ interface RankModalProps {
 }
 
 export const RankModal: React.FC<RankModalProps> = ({ isOpen, onClose }) => {
-  const { rankProgress, summary, nickname, sales, products } = useStore();
+  const { rankProgress, summary, nickname, sales, products, userLevelInfo } = useStore();
   const [activeTab, setActiveTab] = useState<'patentes' | 'conquistas'>('patentes');
 
   if (!isOpen) return null;
@@ -190,6 +190,43 @@ export const RankModal: React.FC<RankModalProps> = ({ isOpen, onClose }) => {
         <div className="p-6 space-y-6 overflow-y-auto">
           {activeTab === 'patentes' ? (
             <>
+              {/* Card de Nível & XP do Lojista */}
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-purple-500/30 flex items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-purple-900/40">
+                    {userLevelInfo.level}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-purple-400 uppercase tracking-wider">
+                        Nível {userLevelInfo.level}
+                      </span>
+                      <span className="text-xs text-slate-300 font-bold">
+                        • {userLevelInfo.levelTitle}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      XP Total: <strong className="text-slate-200 font-mono-numbers">{userLevelInfo.currentXP} XP</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right min-w-[130px]">
+                  <div className="text-[10px] text-slate-400 font-bold">
+                    {userLevelInfo.xpInCurrentLevel} / {userLevelInfo.xpForNextLevel} XP ({userLevelInfo.progressPct.toFixed(0)}%)
+                  </div>
+                  <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden mt-1.5 border border-slate-700/60">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-500"
+                      style={{ width: `${userLevelInfo.progressPct}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-purple-300 font-medium block mt-1">
+                    Venda (+100 XP) • Tarefa (+50 XP)
+                  </span>
+                </div>
+              </div>
+
               {/* Card Holográfico / Metálico da Patente Atual */}
               <div
                 className={`relative p-5 rounded-2xl bg-gradient-to-br ${theme.bg} text-white border ${theme.border} shadow-xl overflow-hidden space-y-4`}

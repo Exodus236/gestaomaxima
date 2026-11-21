@@ -200,3 +200,17 @@ export interface StoreGoalInfo {
   estimatedOrdersNeeded: number;
   averageTicket: number;
 }
+
+// ==========================================
+// GAMIFICAÇÃO: NÍVEL & EXPERIÊNCIA (XP)
+// ==========================================
+
+export interface UserLevelInfo {
+  level: number;
+  currentXP: number;
+  xpInCurrentLevel: number;
+  xpForNextLevel: number;
+  progressPct: number;
+  levelTitle: string;
+}
+

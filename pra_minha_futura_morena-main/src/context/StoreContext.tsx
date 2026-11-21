@@ -9,9 +9,11 @@ import {
   StoreRank,
   StoreRankProgress,
   StoreGoalInfo,
+  UserLevelInfo,
 } from '../types';
 import { useAuth } from './AuthContext';
 import { calculateStoreRank, calculateStoreGoalInfo } from '../utils/ranks';
+import { calculateUserLevel, XP_VALUES } from '../utils/levels';
 import confetti from 'canvas-confetti';
 import {
   fetchAllSupabaseData,
@@ -39,6 +41,9 @@ interface StoreContextType {
   setMonthlyGoal: (goal: number) => void;
   rankProgress: StoreRankProgress;
   goalInfo: StoreGoalInfo;
+  userXP: number;
+  userLevelInfo: UserLevelInfo;
+  addXP: (amount: number, reason?: string) => void;
   levelUpRank: StoreRank | null;
   dismissLevelUp: () => void;
   summary: StoreSummary;
@@ -168,11 +173,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [tasks, setTasks] = useState<StoreTask[]>([]);
   const [monthlyGoal, setMonthlyGoalState] = useState<number>(1000);
   const [levelUpRank, setLevelUpRank] = useState<StoreRank | null>(null);
+  const [userXP, setUserXP] = useState<number>(() => {
+    return Number(localStorage.getItem('rl_market_user_xp')) || 0;
+  });
   const [nickname, setNicknameState] = useState<string>(() => {
     return localStorage.getItem('rl_market_user_nickname') || '';
   });
 
   const dismissLevelUp = () => setLevelUpRank(null);
+
+  const addXP = (amount: number, reason?: string) => {
+    const val = Math.max(0, Math.floor(amount));
+    if (val <= 0) return;
+    setUserXP((prevXP) => {
+      const prevLevel = calculateUserLevel(prevXP).level;
+      const newXP = prevXP + val;
+      const newLevel = calculateUserLevel(newXP).level;
+
+      localStorage.setItem('rl_market_user_xp', String(newXP));
+
+      if (newLevel > prevLevel) {
+        try {
+          confetti({
+            particleCount: 150,
+            spread: 90,
+            origin: { y: 0.5 },
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      return newXP;
+    });
+  };
 
   const setNickname = (newName: string) => {
     const clean = newName.trim();
@@ -226,6 +259,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setTransactions(Array.isArray(parsed.transactions) ? parsed.transactions : []);
         setTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
         setMonthlyGoalState(typeof parsed.monthlyGoal === 'number' && parsed.monthlyGoal > 0 ? parsed.monthlyGoal : 1000);
+        if (typeof parsed.userXP === 'number') {
+          setUserXP(parsed.userXP);
+        } else {
+          const storedXP = Number(localStorage.getItem('rl_market_user_xp')) || 0;
+          setUserXP(storedXP);
+        }
         if (parsed.nickname) {
           setNicknameState(parsed.nickname);
         } else if (user?.user_metadata?.nickname) {
@@ -277,11 +316,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       transactions,
       tasks,
       monthlyGoal,
+      userXP,
       userId: user?.id || null,
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(key, JSON.stringify(payload));
-  }, [capital, pixKey, nickname, products, sales, transactions, tasks, monthlyGoal, getStorageKey, user?.id, authLoading]);
+  }, [capital, pixKey, nickname, products, sales, transactions, tasks, monthlyGoal, userXP, getStorageKey, user?.id, authLoading]);
 
   // CARREGAR DADOS DO SUPABASE AO MUDAR USUÁRIO
   const refreshFromSupabase = useCallback(async () => {
@@ -401,7 +441,59 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     syncSettingsToSupabase(capital, key, user?.id);
   };
 
-  // AÇÕES: PRODUTOS
+  // ROTINA AUTOMÁTICA: Detectar produtos sem vender há mais de 5 dias
+  useEffect(() => {
+    if (!isHydratedRef.current || products.length === 0) return;
+
+    const now = Date.now();
+    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+
+    products.forEach((product) => {
+      // Ignora produtos já esgotados
+      if (product.quantity <= 0 || product.status === 'esgotado') return;
+
+      // Acha a data da última venda deste produto (se houver) ou a data de cadastro
+      const productSales = sales.filter((s) => s.productId === product.id);
+      let referenceDateMs = new Date(product.createdAt).getTime();
+
+      if (productSales.length > 0) {
+        // Pega a mais recente
+        const latestSaleMs = Math.max(...productSales.map((s) => new Date(s.soldAt).getTime()));
+        referenceDateMs = latestSaleMs;
+      }
+
+      const diffMs = now - referenceDateMs;
+      if (diffMs >= FIVE_DAYS_MS) {
+        const daysStagnant = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+        const expectedTitle = `🚨 Giro Lento (+${daysStagnant}d): Criar novas fotos e anúncios de ${product.name}`;
+
+        // Verifica se já existe uma tarefa pendente ou aberta para este produto sobre giro lento
+        const existingTask = tasks.find(
+          (t) =>
+            t.relatedProductId === product.id &&
+            !t.completed &&
+            t.title.includes('Giro Lento')
+        );
+
+        if (!existingTask) {
+          const newTask: StoreTask = {
+            id: `task-slow-${product.id}-${Date.now()}`,
+            userId: user?.id,
+            title: expectedTitle,
+            category: 'marketplace',
+            priority: 'alta',
+            completed: false,
+            relatedProductId: product.id,
+            notes: `Produto sem vender há ${daysStagnant} dias (${product.quantity} un. em estoque). Ação sugerida: tire fotos com novo ângulo/luz, grave um Reels ou faça um novo anúncio testando preço de giro rápido no simulador.`,
+            createdAt: new Date().toISOString(),
+          };
+
+          setTasks((prev) => [newTask, ...prev]);
+          syncTaskToSupabase(newTask, user?.id);
+        }
+      }
+    });
+  }, [products, sales, tasks, user?.id]);
   const addProduct = (
     newProdData: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'userId'>,
     debitFromCapital: boolean = false
@@ -686,6 +778,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
 
+    // XP por venda realizada (XP dobrado)
+    addXP(XP_VALUES.SALE_REGISTERED, `Venda realizada #${code}`);
+
     // Verifica Level Up de Patente e Meta do Mês
     const prevHistoricalRev = sales.reduce((acc, s) => acc + s.totalReceived, 0);
     const newHistoricalRev = prevHistoricalRev + totalReceived;
@@ -705,11 +800,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const prevMonthRev = prevMonthSales.reduce((acc, s) => acc + s.totalReceived, 0);
       const newMonthRev = prevMonthRev + totalReceived;
       if (prevMonthRev < monthlyGoal && newMonthRev >= monthlyGoal) {
+        // XP Triplicado por meta batida!
+        addXP(XP_VALUES.GOAL_COMPLETED, 'Meta do mês alcançada!');
         try {
           confetti({
-            particleCount: 120,
-            spread: 80,
-            origin: { y: 0.6 },
+            particleCount: 160,
+            spread: 90,
+            origin: { y: 0.55 },
           });
         } catch (e) {
           console.error(e);
@@ -874,6 +971,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       prev.map((t) => {
         if (t.id !== id) return t;
         const willComplete = !t.completed;
+        if (willComplete) {
+          // Ganha XP por concluir tarefa
+          addXP(XP_VALUES.TASK_COMPLETED, `Tarefa concluída: ${t.title}`);
+        }
         const updated: StoreTask = {
           ...t,
           completed: willComplete,
@@ -1021,6 +1122,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // CÁLCULO DE GAMIFICAÇÃO & METAS
   const rankProgress = calculateStoreRank(summary.totalFaturamento);
+  const userLevelInfo = calculateUserLevel(userXP);
   const goalInfo = calculateStoreGoalInfo(
     monthlyGoal,
     summary.vendasDoMesFaturamento,
@@ -1044,6 +1146,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setMonthlyGoal,
         rankProgress,
         goalInfo,
+        userXP,
+        userLevelInfo,
+        addXP,
         levelUpRank,
         dismissLevelUp,
         summary,

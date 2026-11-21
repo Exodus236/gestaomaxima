@@ -18,6 +18,7 @@ import {
   User as UserIcon,
   LogIn,
   Edit3,
+  Zap,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -37,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onOpenRankModal,
 }) => {
-  const { summary, darkMode, toggleDarkMode, supabaseConnected, supabaseLoading, refreshFromSupabase, rankProgress, nickname } = useStore();
+  const { summary, darkMode, toggleDarkMode, supabaseConnected, supabaseLoading, refreshFromSupabase, rankProgress, userLevelInfo, nickname } = useStore();
   const { user, isGuest, signOut } = useAuth();
 
   return (
@@ -163,6 +164,28 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
+
+            {/* Level & XP do Lojista */}
+            <div
+              onClick={onOpenRankModal}
+              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-300 cursor-pointer hover:bg-purple-500/15 transition shadow-2xs"
+              title={`Nível ${userLevelInfo.level} (${userLevelInfo.levelTitle}). XP: ${userLevelInfo.xpInCurrentLevel}/${userLevelInfo.xpForNextLevel} (${userLevelInfo.progressPct.toFixed(0)}%). Clique para ver detalhes!`}
+            >
+              <div className="w-5 h-5 rounded-lg bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">
+                {userLevelInfo.level}
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] font-black tracking-tight leading-none">
+                  Nv. {userLevelInfo.level}
+                </span>
+                <div className="w-16 h-1.5 bg-purple-950/20 dark:bg-purple-950/60 rounded-full overflow-hidden mt-1">
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all duration-300"
+                    style={{ width: `${userLevelInfo.progressPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Badge de Patente do Lojista */}
             <button
