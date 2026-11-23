@@ -24,6 +24,7 @@ export const ReportsView: React.FC = () => {
   // 1. PRODUTOS MAIS VENDIDOS
   const salesByProduct: { [productId: string]: { name: string; quantity: number; revenue: number; profit: number } } = {};
   sales.forEach((s) => {
+    if (s.itemKind === 'servico') return;
     if (!salesByProduct[s.productId]) {
       salesByProduct[s.productId] = {
         name: s.productName,
@@ -48,7 +49,7 @@ export const ReportsView: React.FC = () => {
   );
 
   // 3. MARGEM DE LUCRO POR PRODUTO CADASTRADO
-  const productsWithMargin = products.map((p) => {
+  const productsWithMargin = products.filter((p) => p.kind !== 'servico').map((p) => {
     const profit = p.salePrice - p.costPrice;
     const marginPct = p.salePrice > 0 ? (profit / p.salePrice) * 100 : 0;
     return {
@@ -75,6 +76,7 @@ export const ReportsView: React.FC = () => {
       'Código',
       'Data',
       'Produto',
+      'Tipo',
       'Quantidade',
       'Preço Custo Unit',
       'Preço Venda Unit',
@@ -91,6 +93,7 @@ export const ReportsView: React.FC = () => {
       s.code,
       s.soldAt.slice(0, 10),
       `"${s.productName.replace(/"/g, '""')}"`,
+      s.itemKind === 'servico' ? 'Serviço' : 'Produto',
       s.quantity,
       s.unitCostPrice.toFixed(2),
       s.unitFinalPrice.toFixed(2),
@@ -143,6 +146,21 @@ export const ReportsView: React.FC = () => {
           <span>Exportar Vendas para Excel (CSV)</span>
         </button>
       </div>
+
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-label="Origem e destino do caixa">
+        <div className="rounded-xl border border-emerald-200 bg-white p-4 dark:border-emerald-900/50 dark:bg-slate-900">
+          <span className="text-[10px] font-bold uppercase text-slate-500">Receita de serviços</span>
+          <strong className="mt-1 block text-lg text-emerald-600 dark:text-emerald-400">{formatCurrency(summary.totalFaturamentoServicos)}</strong>
+        </div>
+        <div className="rounded-xl border border-blue-200 bg-white p-4 dark:border-blue-900/50 dark:bg-slate-900">
+          <span className="text-[10px] font-bold uppercase text-slate-500">Receita de produtos</span>
+          <strong className="mt-1 block text-lg text-blue-600 dark:text-blue-400">{formatCurrency(summary.totalFaturamento - summary.totalFaturamentoServicos)}</strong>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <span className="text-[10px] font-bold uppercase text-slate-500">Compras de estoque</span>
+          <strong className="mt-1 block text-lg text-slate-900 dark:text-white">{formatCurrency(summary.totalComprasEstoque)}</strong>
+        </div>
+      </section>
 
       {/* Grade de Destaques: Produtos Mais Vendidos vs Produtos Parados */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

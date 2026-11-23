@@ -52,6 +52,8 @@ export function getStatusBadge(status: ProductStatus) {
       return { label: 'Vendido', bg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30' };
     case 'esgotado':
       return { label: 'Esgotado', bg: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30' };
+    case 'quebrou':
+      return { label: 'Quebrou / Prejuízo', bg: 'bg-red-950/30 text-red-500 dark:text-red-400 border-red-500/40' };
     default:
       return { label: status, bg: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30' };
   }
@@ -142,5 +144,7 @@ export function getTransactionTypeLabel(type: TransactionType) {
       return { label: 'Retirada / Pró-labore', isPositive: false, color: 'text-purple-600 dark:text-purple-400' };
     case 'reembolso_compra':
       return { label: 'Reembolso de Compra', isPositive: true, color: 'text-teal-600 dark:text-teal-400' };
+    case 'prejuizo_avaria':
+      return { label: 'Prejuízo / Quebra de Produto', isPositive: false, color: 'text-red-600 dark:text-red-400' };
   }
 }

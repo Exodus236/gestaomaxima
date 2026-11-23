@@ -132,15 +132,15 @@ export const GoalAndRankCard: React.FC<GoalAndRankCardProps> = ({
       </div>
 
       {/* CARD 2: PATENTE DA LOJA (5 Colunas) */}
-      <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
+      <div className={`lg:col-span-5 bg-white dark:bg-slate-900 border ${currentRank.cardBorderClass} rounded-2xl p-5 shadow-xs relative overflow-hidden flex flex-col justify-between`}>
         {/* Brilho de Fundo da Patente */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 dark:bg-amber-500/10 rounded-full blur-2xl pointer-events-none -mr-12 -mt-12"></div>
+        <div className={`absolute top-0 right-0 w-48 h-48 ${currentRank.bgColor} rounded-full blur-2xl pointer-events-none -mr-12 -mt-12`}></div>
 
         <div>
           {/* Topo do Card */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <div className={`w-8 h-8 rounded-xl ${currentRank.bgColor} ${currentRank.color} flex items-center justify-center`}>
                 <Trophy className="w-4 h-4" />
               </div>
               <div>
@@ -155,7 +155,7 @@ export const GoalAndRankCard: React.FC<GoalAndRankCardProps> = ({
 
             <button
               onClick={onOpenRankModal}
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 hover:underline cursor-pointer flex items-center gap-1"
+              className={`text-xs font-bold ${currentRank.color} hover:brightness-110 hover:underline cursor-pointer flex items-center gap-1`}
             >
               <span>Ver Patentes</span>
               <ArrowRight className="w-3 h-3" />
@@ -165,15 +165,15 @@ export const GoalAndRankCard: React.FC<GoalAndRankCardProps> = ({
           {/* Emblema & Nome da Patente */}
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center justify-center text-2xl">
+              <div className={`w-11 h-11 rounded-xl ${currentRank.bgColor} border ${currentRank.borderColor} shadow-xs flex items-center justify-center text-2xl`}>
                 {currentRank.badge}
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-black text-slate-900 dark:text-white">
+                  <span className={`text-sm font-black ${currentRank.color}`}>
                     {currentRank.name}
                   </span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${currentRank.bgColor} ${currentRank.borderColor} ${currentRank.color}`}>
                     Nível Atual
                   </span>
                 </div>

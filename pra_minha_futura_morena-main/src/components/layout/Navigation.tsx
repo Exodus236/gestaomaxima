@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   CheckSquare,
   BarChart3,
+  HeartHandshake,
 } from 'lucide-react';
 
 export type ActiveTab =
@@ -15,7 +16,8 @@ export type ActiveTab =
   | 'finance'
   | 'sales'
   | 'tasks'
-  | 'reports';
+  | 'reports'
+  | 'after-sales';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -34,9 +36,11 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
     },
     {
       id: 'products' as ActiveTab,
-      label: 'Produtos e estoque',
+      label: 'Produtos e serviços',
       icon: Package,
-      badge: summary.totalProdutosCadastrados > 0 ? summary.totalProdutosCadastrados : null,
+      badge: summary.totalProdutosCadastrados + summary.totalServicosCadastrados > 0
+        ? summary.totalProdutosCadastrados + summary.totalServicosCadastrados
+        : null,
     },
     {
       id: 'finance' as ActiveTab,
@@ -61,6 +65,12 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
       id: 'reports' as ActiveTab,
       label: 'Relatórios',
       icon: BarChart3,
+      badge: null,
+    },
+    {
+      id: 'after-sales' as ActiveTab,
+      label: 'Pós-venda',
+      icon: HeartHandshake,
       badge: null,
     },
   ];

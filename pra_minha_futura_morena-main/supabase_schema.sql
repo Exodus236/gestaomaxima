@@ -14,6 +14,7 @@ SET search_path TO public;
 CREATE TABLE IF NOT EXISTS public.products (
     id TEXT PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    kind TEXT NOT NULL DEFAULT 'produto',
     name TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'Geral',
     photo_url TEXT,
@@ -25,17 +26,21 @@ CREATE TABLE IF NOT EXISTS public.products (
     warranty_days INTEGER DEFAULT 90,
     description TEXT,
     supplier TEXT,
+    price_history JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Garantir coluna user_id caso a tabela já tenha sido criada antes
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid();
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'produto';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS price_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- 2. TABELA DE VENDAS
 CREATE TABLE IF NOT EXISTS public.sales (
     id TEXT PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    item_kind TEXT NOT NULL DEFAULT 'produto',
     code TEXT NOT NULL,
     product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
     product_name TEXT NOT NULL,
@@ -59,11 +64,18 @@ CREATE TABLE IF NOT EXISTS public.sales (
     customer_name TEXT,
     customer_phone TEXT,
     warranty_days INTEGER DEFAULT 90,
+    after_sale_status TEXT NOT NULL DEFAULT 'open',
+    follow_up_date TIMESTAMPTZ,
+    after_sale_notes TEXT,
     notes TEXT,
     sold_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid();
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS item_kind TEXT NOT NULL DEFAULT 'produto';
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS after_sale_status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS follow_up_date TIMESTAMPTZ;
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS after_sale_notes TEXT;
 
 -- 3. TABELA DE MOVIMENTAÇÕES FINANCEIRAS (LIVRO CAIXA)
 CREATE TABLE IF NOT EXISTS public.financial_transactions (
@@ -88,6 +100,7 @@ CREATE TABLE IF NOT EXISTS public.store_tasks (
     category TEXT NOT NULL DEFAULT 'geral',
     priority TEXT NOT NULL DEFAULT 'media',
     completed BOOLEAN NOT NULL DEFAULT FALSE,
+    dismissed BOOLEAN NOT NULL DEFAULT FALSE,
     due_date TIMESTAMPTZ,
     related_product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
     notes TEXT,
@@ -96,6 +109,7 @@ CREATE TABLE IF NOT EXISTS public.store_tasks (
 );
 
 ALTER TABLE public.store_tasks ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid();
+ALTER TABLE public.store_tasks ADD COLUMN IF NOT EXISTS dismissed BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- 5. TABELA DE CONFIGURAÇÕES GERAIS DA LOJA
 CREATE TABLE IF NOT EXISTS public.store_settings (

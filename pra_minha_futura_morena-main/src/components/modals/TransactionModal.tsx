@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { X, DollarSign, ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
 
@@ -19,6 +19,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [amount, setAmount] = useState<number>(100);
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Embalagem');
+  const [withdrawalCategory, setWithdrawalCategory] = useState('Pessoal / Pró-labore');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setType(defaultType);
+    setAmount(100);
+    setDescription('');
+    setCategory('Embalagem');
+    setWithdrawalCategory('Pessoal / Pró-labore');
+  }, [isOpen, defaultType]);
 
   if (!isOpen) return null;
 
@@ -31,7 +41,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     } else if (type === 'despesa') {
       addExpense(amount, description || 'Despesa Operacional', category);
     } else {
-      addWithdrawal(amount, description || 'Retirada / Pró-labore');
+      addWithdrawal(amount, description || 'Retirada / Pró-labore', withdrawalCategory);
     }
 
     onClose();
@@ -147,6 +157,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           )}
 
+          {type === 'retirada' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                Tipo de retirada
+              </label>
+              <select
+                value={withdrawalCategory}
+                onChange={(e) => setWithdrawalCategory(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="Pessoal / Pró-labore">Pessoal / Pró-labore</option>
+                <option value="Urgente / A repor">Urgente (vou repor depois)</option>
+              </select>
+            </div>
+          )}
+
           {/* Descrição */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
@@ -159,7 +185,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   ? 'Ex: Entrada de dinheiro para investimento'
                   : type === 'despesa'
                   ? 'Ex: Compra de fitas adesivas e caixas correios'
-                  : 'Ex: Saque de lucro pessoal / pró-labore'
+                  : withdrawalCategory === 'Urgente / A repor'
+                  ? 'Ex: Retirada urgente para gasto pessoal, vou repor depois'
+                  : 'Ex: Saque pessoal / pró-labore'
               }
               value={description}
               onChange={(e) => setDescription(e.target.value)}

@@ -224,6 +224,9 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenNewSale, onOpenRecei
                           <span className="font-semibold text-slate-900 dark:text-white truncate block">
                             {sale.productName}
                           </span>
+                          <span className={`mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold ${sale.itemKind === 'servico' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                            {sale.itemKind === 'servico' ? 'Serviço' : 'Produto'}
+                          </span>
                           {sale.customerName && (
                             <span className="text-[11px] text-slate-400 flex items-center gap-1">
                               <User className="w-3 h-3" /> {sale.customerName}

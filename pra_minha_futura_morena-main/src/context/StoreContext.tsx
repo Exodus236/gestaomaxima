@@ -56,9 +56,11 @@ interface StoreContextType {
   // Produtos
   addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'userId'>, debitFromCapital?: boolean) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
+  updateSale: (id: string, updates: Partial<Pick<Sale, 'afterSaleStatus' | 'followUpDate' | 'afterSaleNotes'>>) => void;
   deleteProduct: (id: string) => void;
   adjustStock: (id: string, quantityChange: number, reason?: string) => void;
   refundProduct: (productId: string, quantityToRefund: number, reason?: string) => { success: boolean; error?: string };
+  recordBrokenLoss: (productId: string, quantityBroken: number, reason?: string) => { success: boolean; error?: string };
   // Vendas
   registerSale: (saleData: {
     productId: string;
@@ -79,7 +81,7 @@ interface StoreContextType {
   // Financeiro
   addCapitalEntry: (amount: number, description: string) => void;
   addExpense: (amount: number, description: string, category: string) => void;
-  addWithdrawal: (amount: number, description: string) => void;
+  addWithdrawal: (amount: number, description: string, category?: string) => void;
   // Tarefas
   addTask: (task: Omit<StoreTask, 'id' | 'createdAt' | 'completed' | 'userId'>) => void;
   toggleTask: (id: string) => void;
@@ -467,12 +469,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const daysStagnant = Math.floor(diffMs / (24 * 60 * 60 * 1000));
         const expectedTitle = `🚨 Giro Lento (+${daysStagnant}d): Criar novas fotos e anúncios de ${product.name}`;
 
-        // Verifica se já existe uma tarefa pendente ou aberta para este produto sobre giro lento
+        // Uma tarefa já resolvida também impede a recriação até uma nova venda.
         const existingTask = tasks.find(
           (t) =>
             t.relatedProductId === product.id &&
-            !t.completed &&
-            t.title.includes('Giro Lento')
+            t.title.includes('Giro Lento') &&
+            new Date(t.createdAt).getTime() >= referenceDateMs
         );
 
         if (!existingTask) {
@@ -504,6 +506,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...newProdData,
       id: newId,
       userId: user?.id,
+      kind: newProdData.kind || 'produto',
+      priceHistory: newProdData.priceHistory || [{
+        costPrice: newProdData.costPrice,
+        salePrice: newProdData.salePrice,
+        minPrice: newProdData.minPrice,
+        recordedAt: now,
+      }],
       createdAt: now,
       updatedAt: now,
     };
@@ -530,7 +539,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       syncTransactionToSupabase(tx, user?.id);
     }
 
-    if (!newProduct.photoUrl || newProduct.photoUrl.trim() === '') {
+    if (newProduct.kind !== 'servico' && (!newProduct.photoUrl || newProduct.photoUrl.trim() === '')) {
       addTask({
         title: `Fotografar ${newProduct.name}`,
         category: 'fotografar',
@@ -545,7 +554,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
-        const updated = { ...p, ...updates, updatedAt: new Date().toISOString() };
+        const updatedAt = new Date().toISOString();
+        const priceChanged =
+          (updates.costPrice !== undefined && updates.costPrice !== p.costPrice) ||
+          (updates.salePrice !== undefined && updates.salePrice !== p.salePrice) ||
+          (updates.minPrice !== undefined && updates.minPrice !== p.minPrice);
+        const updated = {
+          ...p,
+          ...updates,
+          priceHistory: priceChanged
+            ? [
+                ...(p.priceHistory || []),
+                {
+                  costPrice: updates.costPrice ?? p.costPrice,
+                  salePrice: updates.salePrice ?? p.salePrice,
+                  minPrice: updates.minPrice ?? p.minPrice,
+                  recordedAt: updatedAt,
+                },
+              ]
+            : p.priceHistory,
+          updatedAt,
+        };
         if (updated.quantity <= 0 && updated.status === 'disponivel') {
           updated.status = 'esgotado';
         } else if (updated.quantity > 0 && updated.status === 'esgotado') {
@@ -562,10 +591,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deleteProductFromSupabase(id);
   };
 
+  const updateSale = (
+    id: string,
+    updates: Partial<Pick<Sale, 'afterSaleStatus' | 'followUpDate' | 'afterSaleNotes'>>
+  ) => {
+    setSales((prev) =>
+      prev.map((sale) => {
+        if (sale.id !== id) return sale;
+        const updated = { ...sale, ...updates };
+        syncSaleToSupabase(updated, user?.id);
+        return updated;
+      })
+    );
+  };
+
   const adjustStock = (id: string, quantityChange: number) => {
     setProducts((prev) =>
       prev.map((p) => {
-        if (p.id !== id) return p;
+        if (p.id !== id || p.kind === 'servico') return p;
         const newQty = Math.max(0, p.quantity + quantityChange);
         let newStatus = p.status;
         if (newQty <= 0) newStatus = 'esgotado';
@@ -646,6 +689,69 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return { success: true };
   };
 
+  const recordBrokenLoss = (
+    productId: string,
+    quantityBroken: number,
+    reason?: string
+  ): { success: boolean; error?: string } => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      return { success: false, error: 'Produto não encontrado.' };
+    }
+
+    const qty = Number(quantityBroken);
+    if (isNaN(qty) || qty <= 0) {
+      return { success: false, error: 'Quantidade de perda inválida.' };
+    }
+
+    if (product.quantity < qty) {
+      return {
+        success: false,
+        error: `Estoque insuficiente para registrar avaria. Disponível: ${product.quantity} un.`,
+      };
+    }
+
+    // Prejuízo real (custo do produto perdido, NÃO volta ao caixa)
+    const lossAmount = Number((product.costPrice * qty).toFixed(2));
+    const now = new Date().toISOString();
+
+    // 1. Atualiza estoque do produto e status
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== productId) return p;
+        const newQty = p.quantity - qty;
+        let newStatus = p.status;
+        if (newQty <= 0) {
+          newStatus = 'quebrou';
+        }
+        const updated = {
+          ...p,
+          quantity: newQty,
+          status: newStatus,
+          updatedAt: now,
+        };
+        syncProductToSupabase(updated, user?.id);
+        return updated;
+      })
+    );
+
+    // 2. Registra transação financeira de PREJUÍZO (saída / perda no extrato)
+    const tx: FinancialTransaction = {
+      id: `tx-loss-${Date.now()}`,
+      userId: user?.id,
+      type: 'prejuizo_avaria',
+      amount: -lossAmount,
+      description: `Perda / Avaria (Prejuízo): ${qty}x ${product.name}${reason ? ` (${reason})` : ' - Quebrou/Avariado'}`,
+      category: 'Perdas & Avarias',
+      relatedProductId: productId,
+      date: now,
+    };
+    setTransactions((prev) => [tx, ...prev]);
+    syncTransactionToSupabase(tx, user?.id);
+
+    return { success: true };
+  };
+
   // AÇÕES: VENDAS
   const registerSale = (saleData: {
     productId: string;
@@ -664,7 +770,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const product = products.find((p) => p.id === saleData.productId);
     if (!product) return { success: false, error: 'Produto não encontrado.' };
 
-    if (product.quantity < saleData.quantity) {
+    const isService = product.kind === 'servico';
+    if (!isService && product.quantity < saleData.quantity) {
       return {
         success: false,
         error: `Estoque insuficiente! Disponível: ${product.quantity} unidades.`,
@@ -701,6 +808,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newSale: Sale = {
       id: saleId,
       userId: user?.id,
+      itemKind: isService ? 'servico' : 'produto',
       code,
       productId: product.id,
       productName: product.name,
@@ -723,7 +831,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       amountPending,
       customerName: saleData.customerName,
       customerPhone: saleData.customerPhone,
-      warrantyDays: saleData.warrantyDays ?? product.warrantyDays ?? 90,
+      warrantyDays: isService ? 0 : saleData.warrantyDays ?? product.warrantyDays ?? 90,
       notes: saleData.notes,
       soldAt: now,
     };
@@ -731,21 +839,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSales((prev) => [newSale, ...prev]);
     syncSaleToSupabase(newSale, user?.id);
 
-    // Diminui estoque
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== product.id) return p;
-        const newQty = p.quantity - saleQuantity;
-        const updated = {
-          ...p,
-          quantity: newQty,
-          status: newQty <= 0 ? 'esgotado' : p.status,
-          updatedAt: now,
-        };
-        syncProductToSupabase(updated, user?.id);
-        return updated;
-      })
-    );
+    if (!isService) {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id !== product.id) return p;
+          const newQty = p.quantity - saleQuantity;
+          const updated = {
+            ...p,
+            quantity: newQty,
+            status: newQty <= 0 ? 'esgotado' : p.status,
+            updatedAt: now,
+          };
+          syncProductToSupabase(updated, user?.id);
+          return updated;
+        })
+      );
+    }
 
     // Atualiza caixa
     const actualCashIn = paymentStatus === 'pago' ? netReceived : Math.max(0, amountPaid - feeAmount);
@@ -759,7 +868,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         userId: user?.id,
         type: 'venda',
         amount: actualCashIn,
-        description: `Venda #${code} - ${saleQuantity}x ${product.name}${feeAmount > 0 ? ` (Desc. Taxa: -R$ ${feeAmount.toFixed(2)})` : ''}`,
+        description: `${isService ? 'Venda de serviço' : 'Venda'} #${code} - ${saleQuantity}x ${product.name}${feeAmount > 0 ? ` (Desc. Taxa: -R$ ${feeAmount.toFixed(2)})` : ''}`,
+        category: isService ? 'Receita de serviços' : 'Venda de produtos',
         relatedSaleId: saleId,
         relatedProductId: product.id,
         date: now,
@@ -821,20 +931,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const sale = sales.find((s) => s.id === saleId);
     if (!sale) return;
 
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== sale.productId) return p;
-        const newQty = p.quantity + sale.quantity;
-        const updated = {
-          ...p,
-          quantity: newQty,
-          status: p.status === 'esgotado' ? 'disponivel' : p.status,
-          updatedAt: new Date().toISOString(),
-        };
-        syncProductToSupabase(updated, user?.id);
-        return updated;
-      })
-    );
+    if (sale.itemKind !== 'servico') {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id !== sale.productId) return p;
+          const newQty = p.quantity + sale.quantity;
+          const updated = {
+            ...p,
+            quantity: newQty,
+            status: p.status === 'esgotado' ? 'disponivel' : p.status,
+            updatedAt: new Date().toISOString(),
+          };
+          syncProductToSupabase(updated, user?.id);
+          return updated;
+        })
+      );
+    }
 
     const actualCashPaid = sale.paymentStatus === 'pago' ? sale.netReceived : Math.max(0, sale.amountPaid - sale.feeAmount);
     if (actualCashPaid > 0) {
@@ -934,7 +1046,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     syncTransactionToSupabase(tx, user?.id);
   };
 
-  const addWithdrawal = (amount: number, description: string) => {
+  const addWithdrawal = (amount: number, description: string, category?: string) => {
     const now = new Date().toISOString();
     const finalAmount = Math.abs(amount);
     const newCapital = capital - finalAmount;
@@ -947,6 +1059,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       type: 'retirada',
       amount: -finalAmount,
       description: description || 'Retirada / Pró-labore',
+      category: category || 'Pessoal / Pró-labore',
       date: now,
     };
     setTransactions((prev) => [tx, ...prev]);
@@ -987,6 +1100,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteTask = (id: string) => {
+    const task = tasks.find((currentTask) => currentTask.id === id);
+    if (task?.relatedProductId && task.title.includes('Giro Lento')) {
+      const dismissedTask = { ...task, dismissed: true };
+      setTasks((prev) => prev.map((currentTask) => currentTask.id === id ? dismissedTask : currentTask));
+      syncTaskToSupabase(dismissedTask, user?.id);
+      return;
+    }
+
     setTasks((prev) => prev.filter((t) => t.id !== id));
     deleteTaskFromSupabase(id);
   };
@@ -1073,13 +1194,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // CÁLCULOS
-  const totalInvestidoEstoque = products.reduce((acc, p) => acc + p.costPrice * p.quantity, 0);
-  const valorPotencialEstoque = products.reduce((acc, p) => acc + p.salePrice * p.quantity, 0);
+  const inventoryProducts = products.filter((p) => p.kind !== 'servico');
+  const totalInvestidoEstoque = inventoryProducts.reduce((acc, p) => acc + p.costPrice * p.quantity, 0);
+  const valorPotencialEstoque = inventoryProducts.reduce((acc, p) => acc + p.salePrice * p.quantity, 0);
   const lucroPotencialEstoque = valorPotencialEstoque - totalInvestidoEstoque;
 
   const lucroBrutoAcumulado = sales.reduce((acc, s) => acc + s.grossProfit, 0);
   const totalTaxasPlataformas = sales.reduce((acc, s) => acc + (s.feeAmount || 0), 0);
   const totalFaturamento = sales.reduce((acc, s) => acc + s.totalReceived, 0);
+  const totalFaturamentoServicos = sales
+    .filter((sale) => sale.itemKind === 'servico')
+    .reduce((acc, sale) => acc + sale.totalReceived, 0);
+  const totalComprasEstoque = transactions
+    .filter((transaction) => transaction.type === 'compra_estoque')
+    .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0);
   const totalContasAReceber = sales.reduce((acc, s) => acc + (s.amountPending || 0), 0);
 
   const totalDespesasOperacionais = Math.abs(
@@ -1088,7 +1216,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .reduce((acc, t) => acc + t.amount, 0)
   );
 
-  const lucroLiquidoAcumulado = lucroBrutoAcumulado - totalTaxasPlataformas - totalDespesasOperacionais;
+  const totalPrejuizoAvarias = Math.abs(
+    transactions
+      .filter((t) => t.type === 'prejuizo_avaria')
+      .reduce((acc, t) => acc + t.amount, 0)
+  );
+
+  const lucroLiquidoAcumulado = lucroBrutoAcumulado - totalTaxasPlataformas - totalDespesasOperacionais - totalPrejuizoAvarias;
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -1106,18 +1240,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     lucroPotencialEstoque,
     lucroBrutoAcumulado,
     lucroLiquidoAcumulado,
+    totalPrejuizoAvarias,
     totalTaxasPlataformas,
     totalDespesasOperacionais,
     totalFaturamento,
+    totalFaturamentoServicos,
+    totalComprasEstoque,
     totalVendasRealizadas: sales.length,
     vendasDoMesCount: salesThisMonth.length,
     vendasDoMesFaturamento: salesThisMonth.reduce((acc, s) => acc + s.totalReceived, 0),
     vendasDoMesLucro: salesThisMonth.reduce((acc, s) => acc + (s.netProfit || s.grossProfit), 0),
-    totalProdutosCadastrados: products.length,
-    totalItensEmEstoque: products.reduce((acc, p) => acc + p.quantity, 0),
-    produtosEsgotadosCount: products.filter((p) => p.quantity === 0 || p.status === 'esgotado').length,
-    tarefasPendentesCount: tasks.filter((t) => !t.completed).length,
-    tarefasAltaPrioridadeCount: tasks.filter((t) => !t.completed && t.priority === 'alta').length,
+    totalProdutosCadastrados: inventoryProducts.length,
+    totalServicosCadastrados: products.length - inventoryProducts.length,
+    totalItensEmEstoque: inventoryProducts.reduce((acc, p) => acc + p.quantity, 0),
+    produtosEsgotadosCount: inventoryProducts.filter((p) => p.quantity === 0 || p.status === 'esgotado').length,
+    tarefasPendentesCount: tasks.filter((t) => !t.completed && !t.dismissed).length,
+    tarefasAltaPrioridadeCount: tasks.filter((t) => !t.completed && !t.dismissed && t.priority === 'alta').length,
   };
 
   // CÁLCULO DE GAMIFICAÇÃO & METAS
@@ -1168,9 +1306,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         refreshFromSupabase,
         addProduct,
         updateProduct,
+        updateSale,
         deleteProduct,
         adjustStock,
         refundProduct,
+        recordBrokenLoss,
         registerSale,
         cancelSale,
         receivePendingPayment,

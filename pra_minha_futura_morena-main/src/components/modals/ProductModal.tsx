@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
-import { Product, ProductCategory, ProductStatus } from '../../types';
+import { CatalogItemKind, Product, ProductCategory, ProductStatus } from '../../types';
 import { calculateIdealPrice } from '../../utils/channelFees';
 import { X, Package, DollarSign, Image as ImageIcon, Sparkles, AlertCircle, Calculator } from 'lucide-react';
 
@@ -28,6 +28,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const { addProduct, updateProduct, capital } = useStore();
 
   const [name, setName] = useState('');
+  const [kind, setKind] = useState<CatalogItemKind>('produto');
   const [category, setCategory] = useState<ProductCategory>('Ferramentas');
   const [photoUrl, setPhotoUrl] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
@@ -45,6 +46,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [showSimulator, setShowSimulator] = useState(false);
 
   const isEditing = Boolean(productToEdit);
+  const isService = kind === 'servico';
 
   useEffect(() => {
     if (isOpen) {
@@ -52,6 +54,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setShowSimulator(false);
       if (productToEdit) {
         setName(productToEdit.name);
+        setKind(productToEdit.kind || 'produto');
         setCategory(productToEdit.category);
         setPhotoUrl(productToEdit.photoUrl || '');
         setCostPrice(productToEdit.costPrice);
@@ -65,6 +68,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         setDebitFromCapital(false);
       } else {
         setName('');
+        setKind('produto');
         setCategory('Ferramentas');
         setPhotoUrl(samplePhotos[0].url);
         setCostPrice(80);
@@ -97,7 +101,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setErrorMessage('');
 
     if (!name.trim()) {
-      setErrorMessage('O nome do produto é obrigatório.');
+      setErrorMessage(isService ? 'O nome do serviço é obrigatório.' : 'O nome do produto é obrigatório.');
+      return;
+    }
+
+    if (isService && salePrice <= 0) {
+      setErrorMessage('O valor do serviço precisa ser maior que zero.');
       return;
     }
 
@@ -116,6 +125,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     if (isEditing && productToEdit) {
       updateProduct(productToEdit.id, {
         name: name.trim(),
+          kind,
         category,
         photoUrl: photoUrl.trim(),
         costPrice,
@@ -131,6 +141,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       addProduct(
         {
           name: name.trim(),
+          kind,
           category,
           photoUrl: photoUrl.trim(),
           costPrice,
@@ -160,10 +171,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                {isEditing ? 'Editar Produto' : 'Cadastrar Novo Produto'}
+                {isEditing ? (isService ? 'Editar Serviço' : 'Editar Produto') : (isService ? 'Cadastrar Serviço' : 'Cadastrar Novo Produto')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Preencha os detalhes para controlar estoque, custos e preços
+                {isService ? 'Cadastre o serviço que você oferece e o valor cobrado.' : 'Preencha os detalhes para controlar estoque, custos e preços.'}
               </p>
             </div>
           </div>
@@ -184,15 +195,56 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
           )}
 
+          {!isEditing && (
+            <div className="flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="group" aria-label="Tipo do item">
+              <button
+                type="button"
+                onClick={() => {
+                  setKind('produto');
+                  setCategory('Ferramentas');
+                  setPhotoUrl(samplePhotos[0].url);
+                  setCostPrice(80);
+                  setSalePrice(160);
+                  setMinPrice(120);
+                  setQuantity(1);
+                  setWarrantyDays(90);
+                  setDebitFromCapital(false);
+                }}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition ${!isService ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+              >
+                Produto físico
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setKind('servico');
+                  setCategory('Outros');
+                  setPhotoUrl('');
+                  setCostPrice(0);
+                  setSalePrice(0);
+                  setMinPrice(0);
+                  setQuantity(0);
+                  setStatus('disponivel');
+                  setWarrantyDays(0);
+                  setDebitFromCapital(false);
+                  setShowSimulator(false);
+                }}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition ${isService ? 'bg-white text-emerald-700 shadow-sm dark:bg-slate-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`}
+              >
+                Serviço
+              </button>
+            </div>
+          )}
+
           {/* Nome e Categoria */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Nome do Produto *
+                {isService ? 'Nome do Serviço *' : 'Nome do Produto *'}
               </label>
               <input
                 type="text"
-                placeholder="Ex: Parafusadeira Furadeira Bateria 12V Bivolt"
+                placeholder={isService ? 'Ex: Criação de site institucional' : 'Ex: Parafusadeira Furadeira Bateria 12V Bivolt'}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
@@ -219,7 +271,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </div>
 
           {/* Foto */}
-          <div>
+          {!isService && (
+            <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
               URL da Foto do Produto
             </label>
@@ -255,14 +308,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               ))}
             </div>
           </div>
+          )}
 
           {/* Preços e Simulador */}
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <DollarSign className="w-4 h-4 text-emerald-500" />
-                Estrutura de Preços & Margens
+                {isService ? 'Preço do Serviço' : 'Estrutura de Preços & Margens'}
               </h3>
+              {!isService && (
               <button
                 type="button"
                 onClick={() => setShowSimulator(!showSimulator)}
@@ -271,10 +326,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <Calculator className="w-3.5 h-3.5" />
                 <span>{showSimulator ? 'Fechar Simulador' : 'Simulador de Canais'}</span>
               </button>
+              )}
             </div>
 
             {/* Sugestões Rápidas de Marcação de Preço */}
-            {costPrice > 0 && (
+            {!isService && costPrice > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <span className="text-[11px] text-slate-400 flex items-center gap-1 mr-1">
                   <Sparkles className="w-3 h-3 text-amber-500" /> Sugestões automáticas:
@@ -315,8 +371,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
+            <div className={`grid grid-cols-1 ${isService ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3`}>
+              {!isService && <div>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Preço de Compra (Custo) *
                 </label>
@@ -329,10 +385,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono-numbers"
                   required
                 />
-              </div>
+                </div>}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Preço Anunciado (Venda) *
+                    {isService ? 'Valor cobrado pelo serviço *' : 'Preço Anunciado (Venda) *'}
                 </label>
                 <input
                   type="number"
@@ -346,7 +402,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Preço Mínimo de Venda *
+                  {isService ? 'Valor mínimo do serviço (opcional)' : 'Preço Mínimo de Venda *'}
                 </label>
                 <input
                   type="number"
@@ -355,13 +411,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   value={minPrice}
                   onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono-numbers"
-                  required
+                  required={!isService}
                 />
               </div>
             </div>
 
             {/* Simulador de Preço por Canal */}
-            {showSimulator && (
+            {!isService && showSimulator && (
               <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-2 text-xs">
                 <span className="font-bold text-blue-950 dark:text-blue-300 block">
                   💡 Sugestão de Preço para sobrar {formatCurrency(desiredProfit)} líquido no bolso:
@@ -384,15 +440,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             )}
 
             <div className="flex items-center justify-between text-xs pt-1 text-slate-500 dark:text-slate-400">
-              <span>Lucro bruto unitário:</span>
+              <span>{isService ? 'Valor bruto por serviço:' : 'Lucro bruto unitário:'}</span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono-numbers">
-                {formatCurrency(potentialProfit)} ({formatPercent(marginPct)})
+                {isService ? formatCurrency(salePrice) : `${formatCurrency(potentialProfit)} (${formatPercent(marginPct)})`}
               </span>
             </div>
+            {isService && <p className="text-[11px] text-slate-500">Custos de execução, se houver, podem ser lançados depois em Financeiro &gt; Despesas. A venda entra no caixa da empresa.</p>}
           </div>
 
           {/* Estoque e Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {!isService ? <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Quantidade em Estoque *
@@ -433,10 +490,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-mono-numbers"
               />
             </div>
-          </div>
+          </div> : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">Serviços não controlam quantidade nem reduzem o estoque quando vendidos.</div>}
 
           {/* Opção de debitar do capital */}
-          {!isEditing && (
+          {!isEditing && !isService && (
             <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
@@ -461,11 +518,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Fornecedor (opcional)
+                {isService ? 'Responsável ou parceiro (opcional)' : 'Fornecedor (opcional)'}
               </label>
               <input
                 type="text"
-                placeholder="Ex: Distribuidora Brasil"
+                placeholder={isService ? 'Ex: execução própria' : 'Ex: Distribuidora Brasil'}
                 value={supplier}
                 onChange={(e) => setSupplier(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
@@ -473,11 +530,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Observações / Descrição para Anúncios
+                {isService ? 'Descrição do serviço' : 'Observações / Descrição para Anúncios'}
               </label>
               <input
                 type="text"
-                placeholder="Ex: Acompanha maleta, 2 baterias e kit bits"
+                placeholder={isService ? 'Ex: Site institucional com até 5 páginas' : 'Ex: Acompanha maleta, 2 baterias e kit bits'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
@@ -498,7 +555,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               type="submit"
               className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition cursor-pointer"
             >
-              {isEditing ? 'Salvar Alterações' : 'Cadastrar Produto'}
+              {isEditing ? 'Salvar Alterações' : (isService ? 'Cadastrar Serviço' : 'Cadastrar Produto')}
             </button>
           </div>
         </form>

@@ -14,6 +14,7 @@ export function mapProductFromDb(row: any): Product {
   return {
     id: row.id,
     userId: row.user_id,
+    kind: row.kind || 'produto',
     name: row.name,
     category: row.category,
     photoUrl: row.photo_url || '',
@@ -25,6 +26,7 @@ export function mapProductFromDb(row: any): Product {
     warrantyDays: row.warranty_days ? Number(row.warranty_days) : 90,
     description: row.description || '',
     supplier: row.supplier || '',
+    priceHistory: Array.isArray(row.price_history) ? row.price_history : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -34,6 +36,7 @@ export function mapProductToDb(p: Product, currentUserId?: string): any {
   return {
     id: p.id,
     user_id: p.userId || currentUserId || null,
+    kind: p.kind || 'produto',
     name: p.name,
     category: p.category,
     photo_url: p.photoUrl,
@@ -45,6 +48,7 @@ export function mapProductToDb(p: Product, currentUserId?: string): any {
     warranty_days: p.warrantyDays || 90,
     description: p.description,
     supplier: p.supplier,
+    price_history: p.priceHistory || [],
     created_at: p.createdAt,
     updated_at: p.updatedAt,
   };
@@ -54,6 +58,7 @@ export function mapSaleFromDb(row: any): Sale {
   return {
     id: row.id,
     userId: row.user_id,
+    itemKind: row.item_kind || 'produto',
     code: row.code,
     productId: row.product_id,
     productName: row.product_name,
@@ -76,6 +81,9 @@ export function mapSaleFromDb(row: any): Sale {
     amountPending: Number(row.amount_pending || 0),
     customerName: row.customer_name || '',
     customerPhone: row.customer_phone || '',
+    afterSaleStatus: row.after_sale_status || 'open',
+    followUpDate: row.follow_up_date || undefined,
+    afterSaleNotes: row.after_sale_notes || undefined,
     warrantyDays: row.warranty_days ? Number(row.warranty_days) : 90,
     notes: row.notes || '',
     soldAt: row.sold_at,
@@ -86,6 +94,7 @@ export function mapSaleToDb(s: Sale, currentUserId?: string): any {
   return {
     id: s.id,
     user_id: s.userId || currentUserId || null,
+    item_kind: s.itemKind || 'produto',
     code: s.code,
     product_id: s.productId,
     product_name: s.productName,
@@ -108,6 +117,9 @@ export function mapSaleToDb(s: Sale, currentUserId?: string): any {
     amount_pending: s.amountPending,
     customer_name: s.customerName,
     customer_phone: s.customerPhone,
+    after_sale_status: s.afterSaleStatus || 'open',
+    follow_up_date: s.followUpDate || null,
+    after_sale_notes: s.afterSaleNotes || null,
     warranty_days: s.warrantyDays || 90,
     notes: s.notes,
     sold_at: s.soldAt,
@@ -150,6 +162,7 @@ export function mapTaskFromDb(row: any): StoreTask {
     category: row.category,
     priority: row.priority,
     completed: Boolean(row.completed),
+    dismissed: Boolean(row.dismissed),
     dueDate: row.due_date || undefined,
     relatedProductId: row.related_product_id || undefined,
     notes: row.notes || undefined,
@@ -166,6 +179,7 @@ export function mapTaskToDb(t: StoreTask, currentUserId?: string): any {
     category: t.category,
     priority: t.priority,
     completed: t.completed,
+    dismissed: t.dismissed || false,
     due_date: t.dueDate || null,
     related_product_id: t.relatedProductId || null,
     notes: t.notes || null,

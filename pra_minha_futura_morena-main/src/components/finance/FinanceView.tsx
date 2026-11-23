@@ -14,6 +14,8 @@ import {
   FileText,
   Clock,
   CheckCircle,
+  Megaphone,
+  HandCoins,
 } from 'lucide-react';
 
 interface FinanceViewProps {
@@ -30,6 +32,18 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ onOpenTransaction }) =
   });
 
   const pendingSales = sales.filter((s) => s.amountPending > 0);
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const trafficExpenses = transactions.filter((transaction) => {
+    const category = transaction.category?.toLocaleLowerCase('pt-BR') || '';
+    return transaction.type === 'despesa_operacional' && /(an[uú]ncio|tr[aá]fego)/.test(category);
+  });
+  const withdrawals = transactions.filter((transaction) => transaction.type === 'retirada');
+  const sumTransactions = (items: typeof transactions) => items.reduce((total, transaction) => total + Math.abs(transaction.amount), 0);
+  const trafficThisMonth = trafficExpenses.filter((transaction) => new Date(transaction.date) >= monthStart);
+  const withdrawalsThisMonth = withdrawals.filter((transaction) => new Date(transaction.date) >= monthStart);
+  const personalWithdrawals = withdrawals.filter((transaction) => /pessoal|pró-labore/i.test(transaction.category || ''));
+  const urgentWithdrawals = withdrawals.filter((transaction) => /urgente|a repor/i.test(transaction.category || ''));
+  const unclassifiedWithdrawals = withdrawals.filter((transaction) => !transaction.category);
 
   const handleReceive = (saleId: string, customerName: string | undefined, pendingAmount: number) => {
     const valStr = window.prompt(`Receber quanto de ${customerName || 'Cliente'}? (Pendente: ${formatCurrency(pendingAmount)})`, pendingAmount.toFixed(2));
@@ -67,6 +81,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ onOpenTransaction }) =
             >
               <ArrowDownRight className="w-4 h-4" />
               <span>Nova Despesa</span>
+            </button>
+            <button
+              onClick={() => onOpenTransaction('retirada')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 border border-purple-200 dark:border-purple-900/50 transition cursor-pointer"
+            >
+              <HandCoins className="w-4 h-4" />
+              <span>Nova Retirada</span>
             </button>
           </div>
         </div>
@@ -152,6 +173,38 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ onOpenTransaction }) =
           </div>
         </div>
       </div>
+
+      {/* Gastos de tráfego e retiradas do caixa */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="Tráfego pago e retiradas">
+        <div className="rounded-2xl border border-orange-200 bg-white p-5 dark:border-orange-900/50 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+            <Megaphone className="h-4 w-4" />
+            <h3 className="text-xs font-bold uppercase tracking-wider">Tráfego pago</h3>
+            <span className="ml-auto text-[10px] text-slate-400">Acumulado</span>
+          </div>
+          <strong className="mt-2 block text-2xl font-extrabold text-orange-600 dark:text-orange-400 font-mono-numbers">{formatCurrency(sumTransactions(trafficExpenses))}</strong>
+          <div className="mt-2 flex flex-wrap justify-between gap-2 text-[11px] text-slate-500">
+            <span>Este mês: {formatCurrency(sumTransactions(trafficThisMonth))}</span>
+            <span>{trafficExpenses.length} lançamentos</span>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-purple-200 bg-white p-5 dark:border-purple-900/50 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+            <HandCoins className="h-4 w-4" />
+            <h3 className="text-xs font-bold uppercase tracking-wider">Retiradas pessoais e urgentes</h3>
+            <span className="ml-auto text-[10px] text-slate-400">Acumulado</span>
+          </div>
+          <strong className="mt-2 block text-2xl font-extrabold text-purple-600 dark:text-purple-400 font-mono-numbers">{formatCurrency(sumTransactions(withdrawals))}</strong>
+          <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[11px] text-slate-500">
+            <span>Pessoal: {formatCurrency(sumTransactions(personalWithdrawals))}</span>
+            <span>Urgente: {formatCurrency(sumTransactions(urgentWithdrawals))}</span>
+            <span>Este mês: {formatCurrency(sumTransactions(withdrawalsThisMonth))}</span>
+          </div>
+          {unclassifiedWithdrawals.length > 0 && <p className="mt-1 text-[10px] text-slate-400">{unclassifiedWithdrawals.length} retirada(s) antiga(s) sem categoria entram no total geral.</p>}
+        </div>
+      </section>
+      <p className="-mt-4 text-[11px] text-slate-500">Tráfego pago é despesa operacional e reduz o lucro. Retiradas pessoais ou urgentes reduzem o caixa, mas não são despesas operacionais.</p>
 
       {/* Contas a Receber (Vendas a Prazo / Fiado) */}
       {pendingSales.length > 0 && (

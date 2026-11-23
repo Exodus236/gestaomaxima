@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Badge de Patente do Lojista */}
             <button
               onClick={onOpenRankModal}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 transition cursor-pointer shadow-2xs"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl ${rankProgress.currentRank.bgColor} hover:brightness-110 border ${rankProgress.currentRank.borderColor} ${rankProgress.currentRank.color} transition cursor-pointer shadow-2xs`}
               title={`Patente da Loja: ${rankProgress.currentRank.name} (${rankProgress.currentRank.title}). Clique para ver conquistas!`}
             >
               <span className="text-base">{rankProgress.currentRank.badge}</span>

@@ -6,22 +6,32 @@ export type ProductCategory =
   | 'Moda & Vestuário'
   | 'Outros';
 
-export type ProductStatus = 'disponivel' | 'reservado' | 'vendido' | 'esgotado';
+export type ProductStatus = 'disponivel' | 'reservado' | 'vendido' | 'esgotado' | 'quebrou';
+export type CatalogItemKind = 'produto' | 'servico';
+
+export interface ProductPriceSnapshot {
+  costPrice: number;
+  salePrice: number;
+  minPrice: number;
+  recordedAt: string;
+}
 
 export interface Product {
   id: string;
   userId?: string;
+  kind?: CatalogItemKind;
   name: string;
   category: ProductCategory;
   photoUrl: string;
-  costPrice: number;        // Preço de compra / custo unitário
-  salePrice: number;        // Preço anunciado / sugerido
-  minPrice: number;         // Preço mínimo de venda
-  quantity: number;         // Quantidade atual em estoque
+  costPrice: number;
+  salePrice: number;
+  minPrice: number;
+  quantity: number;
   status: ProductStatus;
   description?: string;
   supplier?: string;
-  warrantyDays?: number;    // Dias de garantia (ex: 90)
+  priceHistory?: ProductPriceSnapshot[];
+  warrantyDays?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,45 +54,51 @@ export type SalesChannel =
   | 'outro';
 
 export type PaymentStatus = 'pago' | 'pendente' | 'parcial';
+export type AfterSaleStatus = 'open' | 'contacted' | 'returned' | 'resolved';
 
 export interface Sale {
   id: string;
   userId?: string;
-  code: string;             // Ex: VND-001
+  itemKind?: CatalogItemKind;
+  code: string;
   productId: string;
   productName: string;
   productPhoto?: string;
   quantity: number;
-  unitCostPrice: number;    // Custo unitário no momento da venda
-  unitSalePrice: number;    // Preço anunciado
-  unitFinalPrice: number;   // Preço negociado
-  totalCost: number;        // unitCostPrice * quantity (CMV)
-  totalReceived: number;    // unitFinalPrice * quantity (Bruto)
-  feeAmount: number;        // Taxa do canal / maquininha
-  netReceived: number;      // totalReceived - feeAmount (Líquido que entra no caixa)
-  grossProfit: number;      // totalReceived - totalCost
-  netProfit: number;        // netReceived - totalCost (Lucro Líquido Real)
-  profitMarginPct: number;  // (netProfit / totalReceived) * 100
+  unitCostPrice: number;
+  unitSalePrice: number;
+  unitFinalPrice: number;
+  totalCost: number;
+  totalReceived: number;
+  feeAmount: number;
+  netReceived: number;
+  grossProfit: number;
+  netProfit: number;
+  profitMarginPct: number;
   paymentMethod: PaymentMethod;
   channel: SalesChannel;
   paymentStatus: PaymentStatus;
-  amountPaid: number;       // Valor já pago pelo cliente
-  amountPending: number;    // Valor pendente (fiado / a receber)
+  amountPaid: number;
+  amountPending: number;
   customerName?: string;
-  customerPhone?: string;   // WhatsApp do cliente
-  warrantyDays?: number;    // Dias de garantia oferecidos
+  customerPhone?: string;
+  warrantyDays?: number;
+  afterSaleStatus?: AfterSaleStatus;
+  followUpDate?: string;
+  afterSaleNotes?: string;
   notes?: string;
-  soldAt: string;           // ISO date string
+  soldAt: string;
 }
 
 export type TransactionType =
-  | 'venda'                  // Entrada por venda (+)
-  | 'recebimento_fiado'      // Recebimento de valor que estava pendente (+)
-  | 'aporte_capital'         // Entrada manual de capital no caixa (+)
-  | 'compra_estoque'         // Saída para compra de mercadoria (-)
+  | 'venda'
+  | 'recebimento_fiado'
+  | 'aporte_capital'
+  | 'compra_estoque'
   | 'despesa_operacional'    // Saída com frete, anúncio, embalagem (-)
   | 'retirada'               // Saída de pró-labore / saque (-)
-  | 'reembolso_compra';      // Reembolso/estorno de compra: valor de custo volta ao caixa (+)
+  | 'reembolso_compra'       // Reembolso/estorno de compra: valor de custo volta ao caixa (+)
+  | 'prejuizo_avaria';       // Prejuízo por perda, defeito sem garantia ou quebra (-)
 
 export interface FinancialTransaction {
   id: string;
@@ -115,6 +131,7 @@ export interface StoreTask {
   category: TaskCategory;
   priority: TaskPriority;
   completed: boolean;
+  dismissed?: boolean;
   dueDate?: string;
   relatedProductId?: string;
   notes?: string;
@@ -136,16 +153,20 @@ export interface StoreSummary {
   // 3. Lucro acumulado realizado
   lucroBrutoAcumulado: number;
   lucroLiquidoAcumulado: number;
+  totalPrejuizoAvarias: number;
   totalTaxasPlataformas: number;
   totalDespesasOperacionais: number;
   // Indicadores de vendas
   totalFaturamento: number;
+  totalFaturamentoServicos: number;
+  totalComprasEstoque: number;
   totalVendasRealizadas: number;
   vendasDoMesCount: number;
   vendasDoMesFaturamento: number;
   vendasDoMesLucro: number;
   // Produtos
   totalProdutosCadastrados: number;
+  totalServicosCadastrados: number;
   totalItensEmEstoque: number;
   produtosEsgotadosCount: number;
   // Tarefas

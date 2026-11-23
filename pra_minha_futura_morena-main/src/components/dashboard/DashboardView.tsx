@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ActiveTab } from '../layout/Navigation';
 import { GoalAndRankCard } from './GoalAndRankCard';
+import { StoreInsightsPanel } from './StoreInsightsPanel';
 
 interface DashboardViewProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -41,7 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const summaryCardBorder = rankProgress.currentRank.cardBorderClass || 'border-slate-200 dark:border-slate-800';
 
   const recentSales = sales.slice(0, 5);
-  const pendingTasks = tasks.filter((t) => !t.completed).slice(0, 5);
+  const pendingTasks = tasks.filter((t) => !t.completed && !t.dismissed).slice(0, 5);
   const lowStockProducts = products.filter((p) => p.quantity <= 1);
 
   // Patrimônio Total da Loja = Capital + Estoque
@@ -100,6 +101,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onOpenGoalModal={onOpenGoalModal}
         onOpenRankModal={onOpenRankModal}
       />
+
+      <StoreInsightsPanel />
 
       {/* 6 Indicadores Principais (KPI Cards) com bordas sincronizadas à Patente */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

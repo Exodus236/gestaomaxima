@@ -40,7 +40,8 @@ export const TasksView: React.FC<TasksViewProps> = ({ onOpenNewTask }) => {
   const [filterCategory, setFilterCategory] = useState<string>('todas');
   const [filterStatus, setFilterStatus] = useState<'todas' | 'pendentes' | 'concluidas'>('pendentes');
 
-  const filteredTasks = tasks.filter((t) => {
+  const visibleTasks = tasks.filter((task) => !task.dismissed);
+  const filteredTasks = visibleTasks.filter((t) => {
     const matchesCategory =
       filterCategory === 'todas' || t.category === filterCategory;
 
@@ -121,7 +122,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ onOpenNewTask }) => {
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            Pendentes ({tasks.filter((t) => !t.completed).length})
+            Pendentes ({visibleTasks.filter((t) => !t.completed).length})
           </button>
           <button
             onClick={() => setFilterStatus('concluidas')}
@@ -131,7 +132,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ onOpenNewTask }) => {
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            Concluídas ({tasks.filter((t) => t.completed).length})
+            Concluídas ({visibleTasks.filter((t) => t.completed).length})
           </button>
           <button
             onClick={() => setFilterStatus('todas')}
@@ -141,7 +142,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ onOpenNewTask }) => {
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            Todas ({tasks.length})
+            Todas ({visibleTasks.length})
           </button>
         </div>
 

@@ -10,6 +10,7 @@ import { FinanceView } from './components/finance/FinanceView';
 import { SalesView } from './components/sales/SalesView';
 import { TasksView } from './components/tasks/TasksView';
 import { ReportsView } from './components/reports/ReportsView';
+import { AfterSalesView } from './components/sales/AfterSalesView';
 
 import { NewSaleModal } from './components/modals/NewSaleModal';
 import { ProductModal } from './components/modals/ProductModal';
@@ -148,6 +149,7 @@ function MainApp({ onShowAuth }: MainAppProps) {
         )}
 
         {activeTab === 'reports' && <ReportsView />}
+        {activeTab === 'after-sales' && <AfterSalesView />}
       </main>
 
       {/* Footer */}

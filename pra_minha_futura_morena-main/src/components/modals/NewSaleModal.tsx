@@ -35,8 +35,9 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
   const [notes, setNotes] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  const availableProducts = products.filter((p) => p.quantity > 0);
+  const availableProducts = products.filter((p) => p.kind === 'servico' || p.quantity > 0);
   const selectedProduct = products.find((p) => p.id === productId);
+  const isService = selectedProduct?.kind === 'servico';
 
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +50,8 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
       if (prod) {
         setUnitFinalPrice(prod.salePrice);
         setQuantity(1);
-        setWarrantyDays(prod.warrantyDays || 90);
+        setWarrantyDays(prod.kind === 'servico' ? 0 : prod.warrantyDays || 90);
+        if (prod.kind === 'servico') setChannel('whatsapp');
       }
       setIsManualFee(false);
     }
@@ -66,7 +68,8 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
   }, [channel, paymentMethod, unitFinalPrice, quantity, isManualFee, selectedProduct]);
 
   // Manter amountPaid atualizado com total se o status for 'pago'
-  const totalReceived = unitFinalPrice * quantity;
+  const saleQuantity = isService ? 1 : quantity;
+  const totalReceived = unitFinalPrice * saleQuantity;
   useEffect(() => {
     if (paymentStatus === 'pago') {
       setAmountPaid(totalReceived);
@@ -81,13 +84,14 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
     if (prod) {
       setUnitFinalPrice(prod.salePrice);
       setQuantity(1);
-      setWarrantyDays(prod.warrantyDays || 90);
+      setWarrantyDays(prod.kind === 'servico' ? 0 : prod.warrantyDays || 90);
+      if (prod.kind === 'servico') setChannel('whatsapp');
     }
   };
 
   if (!isOpen) return null;
 
-  const totalCost = selectedProduct ? selectedProduct.costPrice * quantity : 0;
+  const totalCost = selectedProduct && !isService ? selectedProduct.costPrice * saleQuantity : 0;
   const netReceived = Math.max(0, totalReceived - feeAmount);
   const netProfit = netReceived - totalCost;
   const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
@@ -104,12 +108,12 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
       return;
     }
 
-    if (quantity <= 0) {
+    if (!isService && quantity <= 0) {
       setErrorMessage('A quantidade deve ser de pelo menos 1 item.');
       return;
     }
 
-    if (quantity > selectedProduct.quantity) {
+    if (!isService && quantity > selectedProduct.quantity) {
       setErrorMessage(
         `Estoque insuficiente. Há apenas ${selectedProduct.quantity} unidades deste produto.`
       );
@@ -123,7 +127,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
 
     const result = registerSale({
       productId: selectedProduct.id,
-      quantity,
+      quantity: saleQuantity,
       unitFinalPrice,
       feeAmount,
       paymentMethod,
@@ -157,7 +161,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 Registrar Nova Venda
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Sincroniza estoque, taxa do canal, caixa e comprovante
+                Vendas entram no caixa; produtos físicos também atualizam o estoque.
               </p>
             </div>
           </div>
@@ -181,11 +185,11 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
           {/* Seleção do Produto */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Produto Vendido *
+              Produto ou Serviço *
             </label>
             {availableProducts.length === 0 ? (
               <div className="p-4 text-center border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-xl text-amber-700 dark:text-amber-400 text-sm">
-                Nenhum produto com estoque disponível no momento.
+                Nenhum produto com estoque ou serviço cadastrado no momento.
               </div>
             ) : (
               <select
@@ -196,7 +200,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
               >
                 {availableProducts.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} — Estoque: {p.quantity} un. | Sugerido: {formatCurrency(p.salePrice)}
+                    {p.kind === 'servico' ? `Serviço: ${p.name}` : `${p.name} — Estoque: ${p.quantity} un.`} | Sugerido: {formatCurrency(p.salePrice)}
                   </option>
                 ))}
               </select>
@@ -204,8 +208,8 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
           </div>
 
           {/* Quantidade e Preço Final */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+          <div className={`grid grid-cols-1 ${isService ? '' : 'sm:grid-cols-2'} gap-4`}>
+            {!isService && <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Quantidade *
               </label>
@@ -218,10 +222,10 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono-numbers"
                 required
               />
-            </div>
+            </div>}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Preço Unitário Negociado (R$) *
+                {isService ? 'Valor cobrado (R$) *' : 'Preço Unitário Negociado (R$) *'}
               </label>
               <input
                 type="number"
@@ -320,16 +324,17 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 {formatCurrency(netReceived)}
               </span>
             </div>
-            <div className="flex items-center justify-between text-xs">
+            {!isService && <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500 dark:text-slate-400">(-) Custo da Mercadoria (CMV):</span>
               <span className="text-slate-600 dark:text-slate-300 font-mono-numbers">
                 - {formatCurrency(totalCost)}
               </span>
-            </div>
+            </div>}
+            {isService && <p className="text-[11px] text-slate-500">Custos de execução são lançados separadamente em Financeiro &gt; Despesas.</p>}
             <div className="flex items-center justify-between text-sm font-bold pt-2 border-t border-emerald-500/20">
               <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                 <TrendingUp className="w-4 h-4" />
-                <span>Lucro Líquido Real no Bolso:</span>
+                <span>{isService ? 'Líquido da venda após taxas:' : 'Lucro Líquido Real no Bolso:'}</span>
               </div>
               <div className="text-right">
                 <span className={`font-mono-numbers text-base ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
@@ -399,7 +404,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
           </div>
 
           {/* Dados do Cliente & Garantia */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={`grid grid-cols-1 ${isService ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3`}>
             <div className="sm:col-span-1">
               <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">
                 Nome do Cliente
@@ -424,7 +429,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
               />
             </div>
-            <div className="sm:col-span-1">
+            {!isService && <div className="sm:col-span-1">
               <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">
                 Garantia (dias)
               </label>
@@ -435,7 +440,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 onChange={(e) => setWarrantyDays(parseInt(e.target.value) || 0)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
               />
-            </div>
+            </div>}
           </div>
 
           {/* Footer Buttons */}
@@ -453,7 +458,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/20 transition cursor-pointer"
             >
               <CheckCircle className="w-4 h-4" />
-              <span>Concluir Venda</span>
+              <span>{isService ? 'Registrar Venda do Serviço' : 'Concluir Venda'}</span>
             </button>
           </div>
         </form>

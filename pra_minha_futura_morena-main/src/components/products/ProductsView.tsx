@@ -14,9 +14,14 @@ import {
   Megaphone,
   RotateCcw,
   Calculator,
+  HeartCrack,
+  History,
+  Briefcase,
 } from 'lucide-react';
 import { RefundProductModal } from '../modals/RefundProductModal';
 import { PriceSimulatorModal } from '../modals/PriceSimulatorModal';
+import { BrokenLossModal } from '../modals/BrokenLossModal';
+import { ProductHistoryModal } from './ProductHistoryModal';
 
 interface ProductsViewProps {
   onOpenNewProduct: () => void;
@@ -31,15 +36,19 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   onQuickSale,
   onGenerateAd,
 }) => {
-  const { products, deleteProduct, adjustStock, updateProduct, summary } = useStore();
+  const { products, sales, transactions, tasks, deleteProduct, adjustStock, updateProduct, summary } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('todas');
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
+  const [selectedKind, setSelectedKind] = useState<'todos' | 'produto' | 'servico'>('todos');
   const [refundTargetProduct, setRefundTargetProduct] = useState<Product | null>(null);
   const [simulatorTargetProduct, setSimulatorTargetProduct] = useState<Product | null>(null);
+  const [brokenLossTargetProduct, setBrokenLossTargetProduct] = useState<Product | null>(null);
+  const [historyTargetProduct, setHistoryTargetProduct] = useState<Product | null>(null);
 
   const filteredProducts = products.filter((p) => {
+    const matchesKind = selectedKind === 'todos' || (p.kind || 'produto') === selectedKind;
     const matchesSearch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,12 +58,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
       selectedCategory === 'todas' || p.category === selectedCategory;
 
     const matchesStatus =
-      selectedStatus === 'todos' ||
+      selectedStatus === 'todos' || (p.kind === 'servico' ? false :
       (selectedStatus === 'esgotado'
         ? p.quantity === 0 || p.status === 'esgotado'
-        : p.status === selectedStatus);
+        : p.status === selectedStatus));
 
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesKind && matchesCategory && matchesStatus;
   });
 
   const handleDelete = (id: string, name: string) => {
@@ -70,14 +79,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-              Produtos & Controle de Estoque
+              Produtos & Serviços
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              {products.length} itens
+              {products.length} itens no catálogo
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Cadastre custos, preços de venda, margem de segurança e gere anúncios prontos para marketplaces.
+            Gerencie mercadorias em estoque e serviços vendidos diretamente pela empresa.
           </p>
         </div>
 
@@ -99,7 +108,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/20 transition cursor-pointer text-xs sm:text-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>Cadastrar Produto</span>
+            <span>Cadastrar Item</span>
           </button>
         </div>
       </div>
@@ -118,6 +127,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar">
+          <select
+            value={selectedKind}
+            onChange={(e) => setSelectedKind(e.target.value as 'todos' | 'produto' | 'servico')}
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Produtos e serviços</option>
+            <option value="produto">Produtos físicos</option>
+            <option value="servico">Serviços</option>
+          </select>
+
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -155,14 +174,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           <p className="text-xs max-w-sm mx-auto">
             {searchTerm || selectedCategory !== 'todas' || selectedStatus !== 'todos'
               ? 'Tente ajustar os filtros de busca para encontrar o que procura.'
-              : 'Você ainda não cadastrou nenhum produto. Comece adicionando o primeiro item para controlar seu estoque!'}
+              : 'Você ainda não cadastrou produtos ou serviços. Comece adicionando o primeiro item ao catálogo!'}
           </p>
           <button
             onClick={onOpenNewProduct}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition"
           >
             <Plus className="w-4 h-4" />
-            <span>Cadastrar Produto Agora</span>
+            <span>Cadastrar Item Agora</span>
           </button>
         </div>
       ) : (
@@ -172,7 +191,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             const unitProfit = product.salePrice - product.costPrice;
             const marginPct = product.salePrice > 0 ? (unitProfit / product.salePrice) * 100 : 0;
             const totalCost = product.costPrice * product.quantity;
-            const isOutOfStock = product.quantity === 0;
+            const isService = product.kind === 'servico';
+            const isOutOfStock = !isService && product.quantity === 0;
 
             return (
               <div
@@ -193,8 +213,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-1">
-                        <Package className="w-8 h-8 opacity-40" />
-                        <span className="text-[11px]">Sem foto</span>
+                        {isService ? <Briefcase className="w-8 h-8 opacity-40" /> : <Package className="w-8 h-8 opacity-40" />}
+                        <span className="text-[11px]">{isService ? 'Serviço' : 'Sem foto'}</span>
                       </div>
                     )}
 
@@ -208,7 +228,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold border backdrop-blur-xs ${statusInfo.bg}`}
                       >
-                        {isOutOfStock ? 'Esgotado' : statusInfo.label}
+                        {isService ? 'Serviço' : isOutOfStock ? 'Esgotado' : statusInfo.label}
                       </span>
                     </div>
                   </div>
@@ -221,44 +241,44 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </h3>
                       {product.supplier && (
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          Fornecedor: {product.supplier}
+                          {isService ? 'Responsável:' : 'Fornecedor:'} {product.supplier}
                         </p>
                       )}
                     </div>
 
                     {/* Preços e Margem */}
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1.5">
-                      <div className="flex items-center justify-between">
+                      {!isService && <div className="flex items-center justify-between">
                         <span className="text-slate-500 dark:text-slate-400 text-[11px]">Preço de Compra:</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono-numbers">
                           {formatCurrency(product.costPrice)}
                         </span>
-                      </div>
+                      </div>}
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500 dark:text-slate-400 text-[11px]">Preço Anunciado:</span>
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px]">{isService ? 'Valor do Serviço:' : 'Preço Anunciado:'}</span>
                         <span className="font-bold text-slate-900 dark:text-white font-mono-numbers">
                           {formatCurrency(product.salePrice)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      {!isService && product.minPrice > 0 && <div className="flex items-center justify-between">
                         <span className="text-slate-500 dark:text-slate-400 text-[11px]">Preço Mínimo:</span>
                         <span className="font-medium text-amber-600 dark:text-amber-400 font-mono-numbers">
                           {formatCurrency(product.minPrice)}
                         </span>
-                      </div>
+                      </div>}
 
-                      <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between text-[11px]">
+                      {!isService && <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between text-[11px]">
                         <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                           <TrendingUp className="w-3 h-3" /> Margem:
                         </span>
                         <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono-numbers">
                           +{formatCurrency(unitProfit)} ({formatPercent(marginPct)})
                         </span>
-                      </div>
+                      </div>}
                     </div>
 
                     {/* Estoque e Valores Totais */}
-                    <div className="flex items-center justify-between pt-1">
+                    {!isService ? <div className="flex items-center justify-between pt-1">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
                           Estoque Atual
@@ -304,7 +324,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                           {formatCurrency(totalCost)}
                         </span>
                       </div>
-                    </div>
+                    </div> : <div className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">Venda de serviço · sem baixa de estoque</div>}
                   </div>
                 </div>
 
@@ -316,9 +336,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                     <ShoppingCart className="w-3.5 h-3.5" />
-                    <span>Vender</span>
+                    <span>{isService ? 'Vender serviço' : 'Vender'}</span>
                   </button>
 
+                  {!isService && <>
                   {/* Botão Gerar Anúncio */}
                   <button
                     onClick={() => onGenerateAd(product)}
@@ -337,6 +358,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <Calculator className="w-4 h-4" />
                   </button>
 
+                  <button
+                    onClick={() => setHistoryTargetProduct(product)}
+                    className="p-2 rounded-xl text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 transition cursor-pointer"
+                    title="Ver histórico do produto"
+                  >
+                    <History className="w-4 h-4" />
+                  </button>
+
                   {/* Botão Reembolso de Compra */}
                   <button
                     onClick={() => setRefundTargetProduct(product)}
@@ -347,10 +376,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <RotateCcw className="w-4 h-4" />
                   </button>
 
+                  {/* Botão Registrar Quebra / Prejuízo */}
+                  <button
+                    onClick={() => setBrokenLossTargetProduct(product)}
+                    disabled={isOutOfStock}
+                    className="p-2 rounded-xl text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                    title="Dar baixa por Quebra / Defeito (Prejuízo real)"
+                  >
+                    <HeartCrack className="w-4 h-4" />
+                  </button>
+                  </>}
+
                   <button
                     onClick={() => onEditProduct(product)}
                     className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 transition cursor-pointer"
-                    title="Editar Produto"
+                    title={isService ? 'Editar Serviço' : 'Editar Produto'}
                   >
                     <Edit className="w-4 h-4" />
                   </button>
@@ -386,6 +426,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             updateProduct(simulatorTargetProduct.id, { minPrice: newMin });
           }
         }}
+      />
+
+      {/* Modal de Quebra / Prejuízo */}
+      <BrokenLossModal
+        isOpen={!!brokenLossTargetProduct}
+        onClose={() => setBrokenLossTargetProduct(null)}
+        product={brokenLossTargetProduct}
+      />
+
+      <ProductHistoryModal
+        product={historyTargetProduct}
+        sales={sales}
+        transactions={transactions}
+        tasks={tasks}
+        onClose={() => setHistoryTargetProduct(null)}
       />
     </div>
   );

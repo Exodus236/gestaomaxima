@@ -251,6 +251,14 @@ export const RankModal: React.FC<RankModalProps> = ({ isOpen, onClose }) => {
                       <p className="text-xs text-slate-300 font-medium">
                         {currentRank.title}
                       </p>
+                      <button
+                        onClick={() => setActiveTab('conquistas')}
+                        aria-label={`Abrir medalhas: ${unlockedCount} de ${achievements.length} coletadas`}
+                        className={`mt-2 inline-flex items-center gap-1.5 rounded-lg border bg-slate-950/40 px-2 py-1 text-[10px] font-bold transition hover:bg-slate-950/70 ${theme.badgeGlow}`}
+                      >
+                        <Award className="h-3 w-3" />
+                        <span>{unlockedCount}/{achievements.length} medalhas coletadas</span>
+                      </button>
                     </div>
                   </div>
 
